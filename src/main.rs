@@ -28,7 +28,7 @@ impl Display for DatalogExtractionError {
             },
 
             DatalogExtractionError::Custom(msg) => {
-                write!(f, msg)
+                write!(f, "{}", msg)
             }
         }
     }
@@ -221,7 +221,7 @@ impl DatalogExtractor {
             for (str, sym) in self.symbol_table.iter() {
                 println!("{:<15} | {:<15}", str, sym.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.type_table.is_empty() {
@@ -232,7 +232,7 @@ impl DatalogExtractor {
             for (node, node_type) in self.type_table.iter() {
                 println!("{:<15} | {:<15?}", node.0, node_type);
             }
-            println!("");
+            println!();
         }
 
         if !self.number_table.is_empty() {
@@ -243,7 +243,7 @@ impl DatalogExtractor {
             for (node, number) in self.number_table.iter() {
                 println!("{:<15} | {:<15?}", node.0, number);
             }
-            println!("");
+            println!();
         }
 
         if !self.string_table.is_empty() {
@@ -254,7 +254,7 @@ impl DatalogExtractor {
             for (node, str) in self.string_table.iter() {
                 println!("{:<15} | {:<15?}", node.0, str.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.map_table.is_empty() {
@@ -265,7 +265,7 @@ impl DatalogExtractor {
             for (node, key, val) in self.map_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", node.0, key.0, val.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.struct_type_table.is_empty() {
@@ -276,7 +276,7 @@ impl DatalogExtractor {
             for (node, struct_type) in self.string_table.iter() {
                 println!("{:<15} | {:<15?}", node.0, struct_type.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.struct_table.is_empty() {
@@ -287,7 +287,7 @@ impl DatalogExtractor {
             for (node, field, val) in self.struct_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", node.0, field.0, val.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.seq_table.is_empty() {
@@ -298,7 +298,7 @@ impl DatalogExtractor {
             for (node, index, val) in self.seq_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", node.0, index, val.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.variant_type_table.is_empty() {
@@ -309,7 +309,7 @@ impl DatalogExtractor {
             for (node, enum_type, variant_name) in self.variant_type_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", node.0, enum_type.0, variant_name.0);
             }
-            println!("");
+            println!();
         }
 
         if !self.tuple_table.is_empty() {
@@ -320,7 +320,7 @@ impl DatalogExtractor {
             for (node, index, val) in self.tuple_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", node.0, index, val.0);
             }
-            println!("");
+            println!();
         }
     }
 
@@ -332,7 +332,7 @@ impl DatalogExtractor {
 
             CREATE TABLE __SymbolTable (
                 id INTEGER NOT NULL,
-                value TEXT NOT NULL,
+                symbol TEXT NOT NULL,
                 PRIMARY KEY (id)
             );
 
@@ -343,7 +343,7 @@ impl DatalogExtractor {
             );
 
             CREATE VIEW type AS
-            SELECT _type.id AS id, __SymbolTable.value AS type
+            SELECT _type.id AS id, __SymbolTable.symbol AS type
             FROM _type INNER JOIN __SymbolTable
             ON _type.type = __SymbolTable.id;
 
@@ -366,7 +366,7 @@ impl DatalogExtractor {
             );
 
             CREATE VIEW string AS
-            SELECT _string.id AS id, __SymbolTable.value AS value
+            SELECT _string.id AS id, __SymbolTable.symbol AS value
             FROM _string INNER JOIN __SymbolTable
             ON _string.value = __SymbolTable.id;
 
@@ -394,22 +394,9 @@ impl DatalogExtractor {
             );
 
             CREATE VIEW struct AS
-            SELECT _struct.id AS id, __SymbolTable.value AS field, _struct.value AS value
+            SELECT _struct.id AS id, __SymbolTable.symbol AS field, _struct.value AS value
             FROM _struct INNER JOIN __SymbolTable
             ON _struct.field = __SymbolTable.id;
-
-            CREATE TABLE _structType (
-                id INTEGER NOT NULL,
-                type INTEGER NOT NULL,
-                PRIMARY KEY (id),
-                FOREIGN KEY(id) REFERENCES _type(id),
-                FOREIGN KEY(type) REFERENCES __SymbolTable(id)
-            );
-
-            CREATE VIEW structType AS
-            SELECT _structType.id AS id, __SymbolTable.value AS type
-            FROM _structType INNER JOIN __SymbolTable
-            ON _structType.type = __SymbolTable.id;
 
             CREATE TABLE _seq (
                 id INTEGER NOT NULL,
@@ -435,12 +422,41 @@ impl DatalogExtractor {
             CREATE VIEW tuple AS
             SELECT id, pos, value FROM _tuple;
 
+            CREATE TABLE _structType (
+                id INTEGER NOT NULL,
+                type INTEGER NOT NULL,
+                PRIMARY KEY (id),
+                FOREIGN KEY(id) REFERENCES _type(id),
+                FOREIGN KEY(type) REFERENCES __SymbolTable(id)
+            );
+
+            CREATE VIEW structType AS
+            SELECT _structType.id AS id, __SymbolTable.symbol AS type
+            FROM _structType INNER JOIN __SymbolTable
+            ON _structType.type = __SymbolTable.id;
+
+            CREATE TABLE _variantType (
+                id INTEGER NOT NULL,
+                type INTEGER NOT NULL,
+                variant INTEGER NOT NULL,
+                PRIMARY KEY (id),
+                FOREIGN KEY(id) REFERENCES _type(id),
+                FOREIGN KEY(type) REFERENCES __SymbolTable(id),
+                FOREIGN KEY(variant) REFERENCES __SymbolTable(id)
+            );
+
+            CREATE VIEW variantType AS
+            SELECT _variantType.id AS id, s1.symbol AS type, s2.symbol AS variant
+            FROM _variantType
+                INNER JOIN __SymbolTable AS s1 ON _variantType.type = s1.id
+                INNER JOIN __SymbolTable AS s2 ON _variantType.variant = s2.id;
+
             COMMIT;"
         ).unwrap();
 
         let mut insert_symbol_table =
             conn.prepare(
-                "INSERT INTO __SymbolTable (id, value) VALUES (?1, ?2);",
+                "INSERT INTO __SymbolTable (id, symbol) VALUES (?1, ?2);",
             )?;
 
         for (str, id) in self.symbol_table.iter() {
@@ -492,15 +508,6 @@ impl DatalogExtractor {
             insert_struct_table.execute((id.0, field.0, value.0))?;
         }
 
-        let mut insert_struct_type_table =
-            conn.prepare(
-                "INSERT INTO _structType (id, type) VALUES (?1, ?2);"
-            )?;
-
-        for (id, type_sym) in self.struct_type_table.iter() {
-            insert_struct_type_table.execute((id.0, type_sym.0))?;
-        }
-
         let mut insert_seq_table =
             conn.prepare(
                 "INSERT INTO _seq (id, pos, value) VALUES (?1, ?2, ?3);",
@@ -517,6 +524,24 @@ impl DatalogExtractor {
 
         for (id, pos, value) in self.tuple_table.iter() {
             insert_tuple_table.execute((id.0, pos, value.0))?;
+        }
+
+        let mut insert_struct_type_table =
+            conn.prepare(
+                "INSERT INTO _structType (id, type) VALUES (?1, ?2);"
+            )?;
+
+        for (id, type_sym) in self.struct_type_table.iter() {
+            insert_struct_type_table.execute((id.0, type_sym.0))?;
+        }
+
+        let mut insert_variant_type_table =
+            conn.prepare(
+                "INSERT INTO _variantType (id, type, variant) VALUES (?1, ?2, ?3);"
+            )?;
+
+        for (id, type_sym, variant_sym) in self.variant_type_table.iter() {
+            insert_variant_type_table.execute((id.0, type_sym.0, variant_sym.0))?;
         }
 
         rusqlite::Result::Ok(())
@@ -602,7 +627,7 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok> {
-        let sym = self.intern_string(&v.to_string());
+        let sym = self.intern_string(v);
         let id = self.get_fresh_node_id(NodeType::String);
         self.string_table.push((id, sym));
         Result::Ok(())
@@ -621,7 +646,7 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     }
 
     fn serialize_unit(self) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Unit);
+        self.get_fresh_node_id(NodeType::Unit);
         Result::Ok(())
     }
 
@@ -840,8 +865,8 @@ impl<'a> ser::SerializeMap for &'a mut DatalogExtractor {
     fn end(self) -> result::Result<Self::Ok, Self::Error> {
         let (parent_id, num_children) = self.parent_stack.pop().unwrap();
         for _ in 0..num_children {
-            let key_id = self.node_stack.pop().unwrap();
             let val_id = self.node_stack.pop().unwrap();
+            let key_id = self.node_stack.pop().unwrap();
             self.map_table.push((parent_id, key_id, val_id));
         }
         Result::Ok(())
@@ -887,7 +912,8 @@ fn main() {
     io::stdin().read_to_string(&mut input).unwrap();
     let value: Value = serde_json::from_str(&input).unwrap();
     let mut extractor = DatalogExtractor::new();
-    value.serialize(&mut extractor);
-    fs::remove_file("json2.db");
+    value.serialize(&mut extractor).unwrap();
+    let _ = fs::remove_file("json2.db");
+    extractor.dump();
     extractor.dump_to_db("json2.db").unwrap();
 }
