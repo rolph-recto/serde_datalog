@@ -1,3 +1,14 @@
-# serde_datalog
+# Serde Datalog
 
-A [Serde](https://serde.rs/) serializer that extracts Datalog facts.
+Serde Datalog is a universal extractor of Datalog facts. It implements the
+`Serializer` trait from [Serde](https://serde.rs/) to generate a set of
+fact tables from any data structure whose type implements the `Serializable`
+trait.
+
+## Backends
+
+Currently, Serde Datalog can generate a [SQLite](https://www.sqlite.org/)
+database of facts in the format expected by [Souffle](https://souffle-lang.github.io/),
+a high-performance implementation of Datalog. The format is as follows:
+
+- for every input relation `R`, there exists a table `_R` and a view `R`.
