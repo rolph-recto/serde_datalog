@@ -1,0 +1,14 @@
+#include "schemas/json.dl"
+
+.input type, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, filename="json2.db")
+
+.decl group(id: NodeId)
+group(id) :-
+    rootNode(root),
+    jsonRecord(root, "groups", groupList),
+    jsonList(groupList, _, id).
+
+.decl countGroups(n: number)
+countGroups(count : { group(_) }).
+
+.output countGroups(IO=stdout)

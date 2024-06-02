@@ -1,0 +1,30 @@
+{
+    "groups": [
+        {
+            "type": "A",
+            "element": [
+                {
+                    "id": "A1",
+                    "value": "Hello!"
+                },
+                {
+                    "id": "A2",
+                    "value": "World!"
+                }
+            ]
+        },
+        {
+            "type": "B",
+            "element": [
+                {
+                    "id": "B1",
+                    "value": "How!"
+                },
+                {
+                    "id": "B2",
+                    "value": "Many!"
+                }
+            ]
+        }
+    ]
+}

@@ -9,6 +9,4 @@ trait.
 
 Currently, Serde Datalog can generate a [SQLite](https://www.sqlite.org/)
 database of facts in the format expected by [Souffle](https://souffle-lang.github.io/),
-a high-performance implementation of Datalog. The format is as follows:
-
-- for every input relation `R`, there exists a table `_R` and a view `R`.
+a high-performance implementation of Datalog.
