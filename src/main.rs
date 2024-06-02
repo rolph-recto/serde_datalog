@@ -1,3 +1,4 @@
+use clap::Parser;
 use serde::{ser, Serialize};
 use serde_json::Value;
 use std::{
