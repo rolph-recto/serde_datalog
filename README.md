@@ -1,3 +1,5 @@
+[![Rust](https://github.com/rolph-recto/serde_datalog/actions/workflows/rust.yml/badge.svg)](https://github.com/rolph-recto/serde_datalog/actions/workflows/rust.yml)
+
 # Serde Datalog
 
 Serde Datalog is a universal extractor of Datalog facts. It implements the
