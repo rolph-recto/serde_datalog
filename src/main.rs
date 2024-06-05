@@ -30,7 +30,7 @@ fn main() {
     let mut input: String = String::new();
     match args.filename {
         Some(filename) => {
-            input = fs::read_to_string(&filename).unwrap()
+            input = fs::read_to_string(filename).unwrap()
 
         },
         None => {
