@@ -7,7 +7,6 @@ use std::{
 
 #[derive(Debug)]
 pub enum DatalogExtractionError {
-    UnknownLength,
     UnextractableData,
     Custom(String)
 }
@@ -15,10 +14,6 @@ pub enum DatalogExtractionError {
 impl Display for DatalogExtractionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DatalogExtractionError::UnknownLength => {
-                write!(f, "unknown length")
-            },
-
             DatalogExtractionError::UnextractableData => {
                 write!(f, "unextractable data")
             },
