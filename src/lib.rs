@@ -132,32 +132,6 @@ pub struct DatalogExtractor {
 }
 
 impl DatalogExtractor {
-    pub fn new() -> Self {
-        let mut extractor =
-            DatalogExtractor {
-                cur_symbol_id: SymbolId(1),
-                cur_node_id: NodeId(1),
-                type_table: Vec::new(),
-                node_stack: Vec::new(),
-                parent_stack: Vec::new(),
-                symbol_table: HashMap::new(),
-                number_table: Vec::new(),
-                string_table: Vec::new(),
-                map_table: Vec::new(),
-                struct_type_table: Vec::new(),
-                variant_type_table: Vec::new(),
-                struct_table: Vec::new(),
-                seq_table: Vec::new(),
-                tuple_table: Vec::new(),
-            };
-
-        for node_type in NodeType::all().iter() {
-            extractor.intern_string(&node_type.name());
-        }
-
-        extractor
-    }
-
     fn intern_string(&mut self, s: &str) -> SymbolId {
         match self.symbol_table.get(s) {
             Some(id) => *id,
@@ -178,36 +152,7 @@ impl DatalogExtractor {
         id
     }
 
-    fn process_sequence(&mut self, node_type: NodeType) {
-        let table: &mut Vec<(NodeId, usize, NodeId)> =
-            match node_type {
-                NodeType::Seq => {
-                    &mut self.seq_table
-                },
-
-                NodeType::TupleVariant | NodeType::TupleStruct | NodeType::Tuple => {
-                    &mut self.tuple_table
-                }
-
-                _ => unreachable!()
-            };
-
-        let (parent_id, num_children) = self.parent_stack.pop().unwrap();
-        for i in (0..num_children).rev() {
-            let child = self.node_stack.pop().unwrap();
-            table.push((parent_id, i, child));
-        }
-    }
-
-    fn process_field<T: ?Sized + serde::Serialize>(&mut self, key: &str, value: &T) -> Result<()> {
-        value.serialize(&mut *self)?;
-        let field_sym = self.intern_string(key);
-        let parent_id = self.parent_stack.last().unwrap().0;
-        let val_id = self.node_stack.pop().unwrap();
-        self.struct_table.push((parent_id, field_sym, val_id));
-        Result::Ok(())
-    }
-
+    /// Print generate fact tables to standard output.
     pub fn dump(&self) {
         if !self.symbol_table.is_empty() {
             println!("{:^33}", "Symbol Table");
@@ -544,6 +489,34 @@ impl DatalogExtractor {
     }
 }
 
+impl Default for DatalogExtractor {
+    fn default() -> Self {
+        let mut extractor =
+            DatalogExtractor {
+                cur_symbol_id: SymbolId(1),
+                cur_node_id: NodeId(1),
+                type_table: Vec::new(),
+                node_stack: Vec::new(),
+                parent_stack: Vec::new(),
+                symbol_table: HashMap::new(),
+                number_table: Vec::new(),
+                string_table: Vec::new(),
+                map_table: Vec::new(),
+                struct_type_table: Vec::new(),
+                variant_type_table: Vec::new(),
+                struct_table: Vec::new(),
+                seq_table: Vec::new(),
+                tuple_table: Vec::new(),
+            };
+
+        for node_type in NodeType::all().iter() {
+            extractor.intern_string(&node_type.name());
+        }
+
+        extractor
+    }
+}
+
 impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     type Ok = ();
     type Error = DatalogExtractionError;
@@ -700,30 +673,25 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         Result::Ok(())
     }
 
-    fn serialize_seq(self, len_opt: Option<usize>) -> Result<Self::SerializeSeq> {
-        match len_opt {
-            None => Result::Err(DatalogExtractionError::UnknownLength),
-            Some(len) => {
-                let id = self.get_fresh_node_id(NodeType::Seq);
-                self.parent_stack.push((id, len));
-                Result::Ok(self)
-            }
-        }
+    fn serialize_seq(self, _len_opt: Option<usize>) -> Result<Self::SerializeSeq> {
+        let id = self.get_fresh_node_id(NodeType::Seq);
+        self.parent_stack.push((id, 0));
+        Result::Ok(self)
     }
 
-    fn serialize_tuple(self, len: usize) -> Result<Self::SerializeTuple> {
+    fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
         let id = self.get_fresh_node_id(NodeType::Tuple);
-        self.parent_stack.push((id, len));
+        self.parent_stack.push((id, 0));
         Result::Ok(self)
     }
 
     fn serialize_tuple_struct(
         self,
         name: &'static str,
-        len: usize,
+        _len: usize,
     ) -> std::result::Result<Self::SerializeTupleStruct, Self::Error> {
         let id = self.get_fresh_node_id(NodeType::TupleStruct);
-        self.parent_stack.push((id, len));
+        self.parent_stack.push((id, 0));
         let type_sym = self.intern_string(name);
         self.struct_type_table.push((id, type_sym));
         Result::Ok(self)
@@ -734,26 +702,20 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
         let id = self.get_fresh_node_id(NodeType::TupleVariant);
-        self.parent_stack.push((id, len));
+        self.parent_stack.push((id, 0));
         let type_sym = self.intern_string(name);
         let variant_sym = self.intern_string(variant);
         self.variant_type_table.push((id, type_sym, variant_sym));
         Result::Ok(self)
     }
 
-    fn serialize_map(self, len_opt: Option<usize>) -> Result<Self::SerializeMap> {
-        match len_opt {
-            None => Result::Err(DatalogExtractionError::UnknownLength),
-
-            Some(len) => {
-                let id = self.get_fresh_node_id(NodeType::Map);
-                self.parent_stack.push((id, len));
-                Result::Ok(self)
-            }
-        }
+    fn serialize_map(self, _len_opt: Option<usize>) -> Result<Self::SerializeMap> {
+        let id = self.get_fresh_node_id(NodeType::Map);
+        self.parent_stack.push((id, 0));
+        Result::Ok(self)
     }
 
     fn serialize_struct(
@@ -762,7 +724,7 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         len: usize,
     ) -> Result<Self::SerializeStruct> {
         let id = self.get_fresh_node_id(NodeType::Struct);
-        self.parent_stack.push((id, len));
+        self.parent_stack.push((id, 0));
         let type_sym = self.intern_string(name);
         self.struct_type_table.push((id, type_sym));
         Result::Ok(self)
@@ -776,7 +738,7 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         let id = self.get_fresh_node_id(NodeType::StructVariant);
-        self.parent_stack.push((id, len));
+        self.parent_stack.push((id, 0));
         let type_sym = self.intern_string(name);
         let variant_sym = self.intern_string(variant);
         self.variant_type_table.push((id, type_sym, variant_sym));
@@ -790,11 +752,15 @@ impl<'a> ser::SerializeSeq for &'a mut DatalogExtractor {
 
     fn serialize_element<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
         value.serialize(&mut **self)?;
+        let child_id = self.node_stack.pop().unwrap();
+        let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
+        self.seq_table.push((*parent_id, *pos, child_id));
+        *pos += 1;
         Result::Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.process_sequence(NodeType::Seq);
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }
@@ -805,11 +771,15 @@ impl<'a> ser::SerializeTuple for &'a mut DatalogExtractor {
 
     fn serialize_element<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
         value.serialize(&mut **self)?;
+        let child_id = self.node_stack.pop().unwrap();
+        let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
+        self.tuple_table.push((*parent_id, *pos, child_id));
+        *pos += 1;
         Result::Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.process_sequence(NodeType::Tuple);
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }
@@ -820,11 +790,15 @@ impl<'a> ser::SerializeTupleVariant for &'a mut DatalogExtractor {
 
     fn serialize_field<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
         value.serialize(&mut **self)?;
+        let child_id = self.node_stack.pop().unwrap();
+        let (parent_id, pos) = self.parent_stack.last_mut().unwrap();
+        self.tuple_table.push((*parent_id, *pos, child_id));
+        *pos += 1;
         Result::Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.process_sequence(NodeType::TupleVariant);
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }
@@ -835,11 +809,15 @@ impl<'a> ser::SerializeTupleStruct for &'a mut DatalogExtractor {
 
     fn serialize_field<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
         value.serialize(&mut **self)?;
+        let child_id = self.node_stack.pop().unwrap();
+        let (parent_id, pos) = self.parent_stack.last_mut().unwrap();
+        self.tuple_table.push((*parent_id, *pos, child_id));
+        *pos += 1;
         Result::Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.process_sequence(NodeType::TupleStruct);
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }
@@ -855,16 +833,15 @@ impl<'a> ser::SerializeMap for &'a mut DatalogExtractor {
 
     fn serialize_value<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
         value.serialize(&mut **self)?;
+        let (parent_id, _) = self.parent_stack.last().unwrap();
+        let val_id = self.node_stack.pop().unwrap();
+        let key_id = self.node_stack.pop().unwrap();
+        self.map_table.push((*parent_id, key_id, val_id));
         Result::Ok(())
     }
 
     fn end(self) -> result::Result<Self::Ok, Self::Error> {
-        let (parent_id, num_children) = self.parent_stack.pop().unwrap();
-        for _ in 0..num_children {
-            let val_id = self.node_stack.pop().unwrap();
-            let key_id = self.node_stack.pop().unwrap();
-            self.map_table.push((parent_id, key_id, val_id));
-        }
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }
@@ -878,10 +855,16 @@ impl<'a> ser::SerializeStruct for &'a mut DatalogExtractor {
         key: &'static str,
         value: &T
     ) -> Result<Self::Ok> {
-        self.process_field(key, value)
+        value.serialize(&mut **self)?;
+        let key_sym = self.intern_string(key);
+        let (parent_id, _) = self.parent_stack.last_mut().unwrap();
+        let val_id = self.node_stack.pop().unwrap();
+        self.struct_table.push((*parent_id, key_sym, val_id));
+        Result::Ok(())
     }
 
     fn end(self) -> Result<Self::Ok> {
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }
@@ -895,10 +878,16 @@ impl<'a> ser::SerializeStructVariant for &'a mut DatalogExtractor {
         key: &'static str,
         value: &T
     ) -> Result<Self::Ok> {
-        self.process_field(key, value)
+        value.serialize(&mut **self)?;
+        let key_sym = self.intern_string(key);
+        let (parent_id, _) = self.parent_stack.last_mut().unwrap();
+        let val_id = self.node_stack.pop().unwrap();
+        self.struct_table.push((*parent_id, key_sym, val_id));
+        Result::Ok(())
     }
 
     fn end(self) -> result::Result<Self::Ok, Self::Error> {
+        self.parent_stack.pop();
         Result::Ok(())
     }
 }

@@ -1,6 +1,4 @@
 use clap::Parser;
-use serde::Serialize;
-use serde_json::Value;
 use std::{
     io::{self, Read},
     fs,
@@ -23,7 +21,7 @@ struct Args {
     filename: Option<String>,
 
     #[arg(short = 'o', long = "output", help = "File name of output SQLite database")]
-    output: String,
+    output: Option<String>,
 }
 
 fn main() {
@@ -40,14 +38,21 @@ fn main() {
         }
     };
 
-    let value: Value = serde_json::from_str(&input).unwrap();
-    let mut extractor = DatalogExtractor::new();
-    value.serialize(&mut extractor).unwrap();
+    let mut deserializer = serde_json::Deserializer::from_str(&input);
+    let mut extractor = DatalogExtractor::default();
+    serde_transcode::transcode(&mut deserializer, &mut extractor).unwrap();
 
-    let outpath = Path::new(&args.output);
-    if outpath.is_file() {
-        fs::remove_file(&args.output).unwrap();
+    match args.output {
+        Some(output_file) => {
+            let outpath = Path::new(&output_file);
+            if outpath.is_file() {
+                fs::remove_file(&output_file).unwrap();
+            }
+            extractor.dump_to_db(&output_file).unwrap();
+        },
+
+        None => {
+            extractor.dump();
+        }
     }
-
-    extractor.dump_to_db(&args.output).unwrap();
 }
