@@ -487,6 +487,40 @@ impl DatalogExtractor {
 
         rusqlite::Result::Ok(())
     }
+
+    fn serialize_tuple_or_seq_element<T: ?Sized + serde::Serialize>(&mut self, value: &T, node_type: NodeType) -> Result<()> {
+        value.serialize(&mut *self)?;
+        let table: &mut Vec<(NodeId, usize, NodeId)> =
+            match node_type {
+                NodeType::Seq => &mut self.seq_table,
+                NodeType::Tuple | NodeType::TupleStruct | NodeType::TupleVariant => &mut self.tuple_table,
+                _ => unreachable!()
+            };
+
+        let child_id = self.node_stack.pop().unwrap();
+        let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
+        table.push((*parent_id, *pos, child_id));
+        *pos += 1;
+        Result::Ok(())
+    }
+
+    fn end_parent(&mut self) -> Result<()> {
+        self.parent_stack.pop();
+        Result::Ok(())
+    }
+
+    fn serialize_struct_element<T: ?Sized + serde::Serialize>(
+        &mut self,
+        key: &'static str,
+        value: &T
+    ) -> Result<()> {
+        value.serialize(&mut *self)?;
+        let key_sym = self.intern_string(key);
+        let (parent_id, _) = self.parent_stack.last_mut().unwrap();
+        let val_id = self.node_stack.pop().unwrap();
+        self.struct_table.push((*parent_id, key_sym, val_id));
+        Result::Ok(())
+    }
 }
 
 impl Default for DatalogExtractor {
@@ -721,7 +755,7 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     fn serialize_struct(
         self,
         name: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeStruct> {
         let id = self.get_fresh_node_id(NodeType::Struct);
         self.parent_stack.push((id, 0));
@@ -735,7 +769,7 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         name: &'static str,
         _variant_index: u32,
         variant: &'static str,
-        len: usize,
+        _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
         let id = self.get_fresh_node_id(NodeType::StructVariant);
         self.parent_stack.push((id, 0));
@@ -751,17 +785,11 @@ impl<'a> ser::SerializeSeq for &'a mut DatalogExtractor {
     type Error = DatalogExtractionError;
 
     fn serialize_element<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
-        value.serialize(&mut **self)?;
-        let child_id = self.node_stack.pop().unwrap();
-        let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
-        self.seq_table.push((*parent_id, *pos, child_id));
-        *pos += 1;
-        Result::Ok(())
+        self.serialize_tuple_or_seq_element(value, NodeType::Seq)
     }
 
-    fn end(self) -> Result<Self::Ok> {
-        self.parent_stack.pop();
-        Result::Ok(())
+    fn end(self) -> Result<()> {
+        self.end_parent()
     }
 }
 
@@ -770,17 +798,11 @@ impl<'a> ser::SerializeTuple for &'a mut DatalogExtractor {
     type Error = DatalogExtractionError;
 
     fn serialize_element<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
-        value.serialize(&mut **self)?;
-        let child_id = self.node_stack.pop().unwrap();
-        let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
-        self.tuple_table.push((*parent_id, *pos, child_id));
-        *pos += 1;
-        Result::Ok(())
+        self.serialize_tuple_or_seq_element(value, NodeType::Tuple)
     }
 
-    fn end(self) -> Result<Self::Ok> {
-        self.parent_stack.pop();
-        Result::Ok(())
+    fn end(self) -> Result<()> {
+        self.end_parent()
     }
 }
 
@@ -789,17 +811,11 @@ impl<'a> ser::SerializeTupleVariant for &'a mut DatalogExtractor {
     type Error = DatalogExtractionError;
 
     fn serialize_field<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
-        value.serialize(&mut **self)?;
-        let child_id = self.node_stack.pop().unwrap();
-        let (parent_id, pos) = self.parent_stack.last_mut().unwrap();
-        self.tuple_table.push((*parent_id, *pos, child_id));
-        *pos += 1;
-        Result::Ok(())
+        self.serialize_tuple_or_seq_element(value, NodeType::TupleVariant)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.parent_stack.pop();
-        Result::Ok(())
+        self.end_parent()
     }
 }
 
@@ -808,17 +824,11 @@ impl<'a> ser::SerializeTupleStruct for &'a mut DatalogExtractor {
     type Error = DatalogExtractionError;
 
     fn serialize_field<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
-        value.serialize(&mut **self)?;
-        let child_id = self.node_stack.pop().unwrap();
-        let (parent_id, pos) = self.parent_stack.last_mut().unwrap();
-        self.tuple_table.push((*parent_id, *pos, child_id));
-        *pos += 1;
-        Result::Ok(())
+        self.serialize_tuple_or_seq_element(value, NodeType::TupleStruct)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.parent_stack.pop();
-        Result::Ok(())
+        self.end_parent()
     }
 }
 
@@ -841,8 +851,7 @@ impl<'a> ser::SerializeMap for &'a mut DatalogExtractor {
     }
 
     fn end(self) -> result::Result<Self::Ok, Self::Error> {
-        self.parent_stack.pop();
-        Result::Ok(())
+        self.end_parent()
     }
 }
 
@@ -855,17 +864,11 @@ impl<'a> ser::SerializeStruct for &'a mut DatalogExtractor {
         key: &'static str,
         value: &T
     ) -> Result<Self::Ok> {
-        value.serialize(&mut **self)?;
-        let key_sym = self.intern_string(key);
-        let (parent_id, _) = self.parent_stack.last_mut().unwrap();
-        let val_id = self.node_stack.pop().unwrap();
-        self.struct_table.push((*parent_id, key_sym, val_id));
-        Result::Ok(())
+        self.serialize_struct_element(key, value)
     }
 
     fn end(self) -> Result<Self::Ok> {
-        self.parent_stack.pop();
-        Result::Ok(())
+        self.end_parent()
     }
 }
 
@@ -878,16 +881,10 @@ impl<'a> ser::SerializeStructVariant for &'a mut DatalogExtractor {
         key: &'static str,
         value: &T
     ) -> Result<Self::Ok> {
-        value.serialize(&mut **self)?;
-        let key_sym = self.intern_string(key);
-        let (parent_id, _) = self.parent_stack.last_mut().unwrap();
-        let val_id = self.node_stack.pop().unwrap();
-        self.struct_table.push((*parent_id, key_sym, val_id));
-        Result::Ok(())
+        self.serialize_struct_element(key, value)
     }
 
     fn end(self) -> result::Result<Self::Ok, Self::Error> {
-        self.parent_stack.pop();
-        Result::Ok(())
+        self.end_parent()
     }
 }
