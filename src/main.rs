@@ -5,7 +5,7 @@ use std::{
     path::Path
 };
 
-use serde_datalog::DatalogExtractor;
+use serde_datalog::{DatalogExtractor, SouffleSQLiteBackend};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -39,8 +39,11 @@ fn main() {
     };
 
     let mut deserializer = serde_json::Deserializer::from_str(&input);
-    let mut extractor = DatalogExtractor::default();
+    let mut souffle_sqlite = SouffleSQLiteBackend::default();
+
+    let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
     serde_transcode::transcode(&mut deserializer, &mut extractor).unwrap();
+    drop(extractor);
 
     match args.output {
         Some(output_file) => {
@@ -48,11 +51,11 @@ fn main() {
             if outpath.is_file() {
                 fs::remove_file(&output_file).unwrap();
             }
-            extractor.dump_to_db(&output_file).unwrap();
+            souffle_sqlite.dump_to_db(&output_file).unwrap();
         },
 
         None => {
-            extractor.dump();
+            souffle_sqlite.dump();
         }
     }
 }

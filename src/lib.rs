@@ -93,13 +93,25 @@ impl NodeType {
     }
 }
 
-pub struct DatalogExtractor {
+pub trait DatalogExtractorBackend {
+    type Ok;
+    fn add_node(&mut self, node: NodeId, node_type: NodeType) -> Result<Self::Ok>;
+    fn add_number(&mut self, node: NodeId, value: isize) -> Result<Self::Ok>;
+    fn add_string(&mut self, node: NodeId, value: &str) -> Result<Self::Ok>;
+    fn add_map(&mut self, node: NodeId, key: NodeId, value: NodeId) -> Result<Self::Ok>;
+    fn add_struct_type(&mut self, node: NodeId, struct_name: &str) -> Result<Self::Ok>;
+    fn add_struct(&mut self, node: NodeId, key: &str, value: NodeId) -> Result<Self::Ok>;
+    fn add_seq(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<Self::Ok>;
+    fn add_variant_type(&mut self, node: NodeId, type_name: &str, variant_name: &str) -> Result<Self::Ok>;
+    fn add_tuple(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<Self::Ok>;
+}
+
+pub struct SouffleSQLiteBackend {
     cur_symbol_id: SymbolId,
-    cur_node_id: NodeId,
-    type_table: Vec<(NodeId, NodeType)>,
-    node_stack: Vec<NodeId>,
-    parent_stack: Vec<(NodeId, usize)>,
     symbol_table: HashMap<String, SymbolId>,
+
+    // (node, node type)
+    type_table: Vec<(NodeId, SymbolId)>,
 
     // (node, value)
     number_table: Vec<(NodeId, isize)>,
@@ -126,25 +138,35 @@ pub struct DatalogExtractor {
     tuple_table: Vec<(NodeId, usize, NodeId)>,
 }
 
-impl DatalogExtractor {
+impl Default for SouffleSQLiteBackend {
+    fn default() -> Self {
+        Self {
+            cur_symbol_id: SymbolId(1),
+            symbol_table: Default::default(),
+            type_table: Default::default(),
+            number_table: Default::default(),
+            string_table: Default::default(),
+            map_table: Default::default(),
+            struct_type_table: Default::default(),
+            struct_table: Default::default(),
+            seq_table: Default::default(),
+            variant_type_table: Default::default(),
+            tuple_table: Default::default()
+        }
+    }
+}
+
+impl SouffleSQLiteBackend {
     fn intern_string(&mut self, s: &str) -> SymbolId {
         match self.symbol_table.get(s) {
             Some(id) => *id,
             None => {
                 let SymbolId(id) = self.cur_symbol_id;
-                self.symbol_table.insert(s.to_string(), SymbolId(id));
+                self.symbol_table.insert(s.to_string(), self.cur_symbol_id);
                 self.cur_symbol_id.0 += 1;
                 SymbolId(id)
             }
         }
-    }
-
-    fn get_fresh_node_id(&mut self, node_type: NodeType) -> NodeId {
-        let id = self.cur_node_id;
-        self.type_table.push((id, node_type));
-        self.node_stack.push(id);
-        self.cur_node_id.0 += 1;
-        id
     }
 
     /// Print generate fact tables to standard output.
@@ -166,7 +188,7 @@ impl DatalogExtractor {
             println!("{:<15} | {:<15}", "Node Id", "Node Type");
             println!("---------------------------------");
             for (node, node_type) in self.type_table.iter() {
-                println!("{:<15} | {:<15?}", node.0, node_type);
+                println!("{:<15} | {:<15?}", node.0, node_type.0);
             }
             println!();
         }
@@ -405,7 +427,7 @@ impl DatalogExtractor {
             )?;
 
         for (id, node_type) in self.type_table.iter() {
-            insert_type_table.execute((id.0, self.symbol_table[&node_type.name()].0))?;
+            insert_type_table.execute((id.0, node_type.0))?;
         }
 
         let mut insert_number_table =
@@ -482,21 +504,105 @@ impl DatalogExtractor {
 
         rusqlite::Result::Ok(())
     }
+}
+
+impl<'a> DatalogExtractorBackend for &'a mut SouffleSQLiteBackend {
+    type Ok = ();
+
+    fn add_node(&mut self, node: NodeId, node_type: NodeType) -> Result<()> {
+        let node_type_sym = self.intern_string(&node_type.name());
+        self.type_table.push((node, node_type_sym));
+        Result::Ok(())
+    }
+
+    fn add_number(&mut self, node: NodeId, value: isize) -> Result<()> {
+        self.number_table.push((node, value));
+        Result::Ok(())
+    }
+
+    fn add_string(&mut self, node: NodeId, value: &str) -> Result<()> {
+        let value_sym = self.intern_string(value);
+        self.string_table.push((node, value_sym));
+        Result::Ok(())
+    }
+
+    fn add_map(&mut self, node: NodeId, key: NodeId, value: NodeId) -> Result<()> {
+        self.map_table.push((node, key, value));
+        Result::Ok(())
+    }
+
+    fn add_struct_type(&mut self, node: NodeId, struct_name: &str) -> Result<()> {
+        let struct_name_sym = self.intern_string(struct_name);
+        self.struct_type_table.push((node, struct_name_sym));
+        Result::Ok(())
+    }
+
+    fn add_struct(&mut self, node: NodeId, key: &str, value: NodeId) -> Result<()> {
+        let key_sym = self.intern_string(key);
+        self.struct_table.push((node, key_sym, value));
+        Result::Ok(())
+    }
+
+    fn add_seq(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<()> {
+        self.seq_table.push((node, pos, value));
+        Result::Ok(())
+    }
+
+    fn add_variant_type(&mut self, node: NodeId, type_name: &str, variant_name: &str) -> Result<()> {
+        let type_name_sym = self.intern_string(type_name);
+        let variant_name_sym = self.intern_string(variant_name);
+        self.variant_type_table.push((node, type_name_sym, variant_name_sym));
+        Result::Ok(())
+    }
+
+    fn add_tuple(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<()> {
+        self.tuple_table.push((node, pos, value));
+        Result::Ok(())
+    }
+}
+
+pub struct DatalogExtractor<'a> {
+    cur_node_id: NodeId,
+    node_stack: Vec<NodeId>,
+    parent_stack: Vec<(NodeId, usize)>,
+    backend: Box<dyn DatalogExtractorBackend<Ok = ()> + 'a>,
+}
+
+impl<'a> DatalogExtractor<'a> {
+    pub fn new<T: 'a + DatalogExtractorBackend<Ok = ()>>(backend: T) -> Self {
+        DatalogExtractor {
+            backend: Box::new(backend),
+            cur_node_id: NodeId(1),
+            node_stack: Vec::new(),
+            parent_stack: Vec::new(),
+        }
+    }
+
+    fn get_fresh_node_id(&mut self, node_type: NodeType) -> Result<NodeId> {
+        let id = self.cur_node_id;
+        self.backend.add_node(id, node_type)?;
+        self.node_stack.push(id);
+        self.cur_node_id.0 += 1;
+        Result::Ok(id)
+    }
 
     fn serialize_tuple_or_seq_element<T: ?Sized + serde::Serialize>(&mut self, value: &T, node_type: NodeType) -> Result<()> {
         value.serialize(&mut *self)?;
-        let table: &mut Vec<(NodeId, usize, NodeId)> =
-            match node_type {
-                NodeType::Seq => &mut self.seq_table,
-                NodeType::Tuple | NodeType::TupleStruct | NodeType::TupleVariant => &mut self.tuple_table,
-                _ => unreachable!()
-            };
-
         let child_id = self.node_stack.pop().unwrap();
         let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
-        table.push((*parent_id, *pos, child_id));
         *pos += 1;
-        Result::Ok(())
+
+        match node_type {
+            NodeType::Seq => {
+                self.backend.add_seq(*parent_id, *pos, child_id)
+            }
+
+            NodeType::Tuple | NodeType::TupleStruct | NodeType::TupleVariant => {
+                self.backend.add_tuple(*parent_id, *pos, child_id)
+            }
+
+            _ => unreachable!()
+        }
     }
 
     fn end_parent(&mut self) -> Result<()> {
@@ -510,43 +616,13 @@ impl DatalogExtractor {
         value: &T
     ) -> Result<()> {
         value.serialize(&mut *self)?;
-        let key_sym = self.intern_string(key);
         let (parent_id, _) = self.parent_stack.last_mut().unwrap();
         let val_id = self.node_stack.pop().unwrap();
-        self.struct_table.push((*parent_id, key_sym, val_id));
-        Result::Ok(())
+        self.backend.add_struct(*parent_id, key, val_id)
     }
 }
 
-impl Default for DatalogExtractor {
-    fn default() -> Self {
-        let mut extractor =
-            DatalogExtractor {
-                cur_symbol_id: SymbolId(1),
-                cur_node_id: NodeId(1),
-                type_table: Vec::new(),
-                node_stack: Vec::new(),
-                parent_stack: Vec::new(),
-                symbol_table: HashMap::new(),
-                number_table: Vec::new(),
-                string_table: Vec::new(),
-                map_table: Vec::new(),
-                struct_type_table: Vec::new(),
-                variant_type_table: Vec::new(),
-                struct_table: Vec::new(),
-                seq_table: Vec::new(),
-                tuple_table: Vec::new(),
-            };
-
-        for node_type in NodeType::all().iter() {
-            extractor.intern_string(&node_type.name());
-        }
-
-        extractor
-    }
-}
-
-impl<'a> ser::Serializer for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -559,57 +635,48 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     type SerializeStructVariant = Self;
 
     fn serialize_bool(self, v: bool) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, if v { 1 } else { 0 }));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, if v { 1 } else { 0 })
     }
 
     fn serialize_i8(self, v: i8) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_i16(self, v: i16) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_i32(self, v: i32) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_i64(self, v: i64) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_u8(self, v: u8) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_u16(self, v: u16) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_u32(self, v: u32) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number);
-        self.number_table.push((id, v as isize));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::Number)?;
+        self.backend.add_number(id, v as isize)
     }
 
     fn serialize_f32(self, _v: f32) -> Result<Self::Ok> {
@@ -625,10 +692,8 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     }
 
     fn serialize_str(self, v: &str) -> Result<Self::Ok> {
-        let sym = self.intern_string(v);
-        let id = self.get_fresh_node_id(NodeType::String);
-        self.string_table.push((id, sym));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::String)?;
+        self.backend.add_string(id, v)
     }
 
     fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok> {
@@ -649,10 +714,8 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     }
 
     fn serialize_unit_struct(self, name: &'static str) -> Result<Self::Ok> {
-        let type_sym = self.intern_string(name);
-        let id = self.get_fresh_node_id(NodeType::UnitStruct);
-        self.struct_type_table.push((id, type_sym));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::UnitStruct)?;
+        self.backend.add_struct_type(id, name)
     }
 
     fn serialize_unit_variant(
@@ -661,12 +724,9 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         _variant_index: u32,
         variant: &'static str,
     ) -> std::result::Result<Self::Ok, Self::Error> {
-        let id = self.get_fresh_node_id(NodeType::UnitVariant);
+        let id = self.get_fresh_node_id(NodeType::UnitVariant)?;
         self.node_stack.push(id);
-        let type_sym = self.intern_string(name);
-        let variant_sym = self.intern_string(variant);
-        self.variant_type_table.push((id, type_sym, variant_sym));
-        Result::Ok(())
+        self.backend.add_variant_type(id, name, variant)
     }
 
     fn serialize_newtype_struct<T: ?Sized + serde::Serialize>(
@@ -676,12 +736,9 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
     ) -> Result<Self::Ok> {
         value.serialize(&mut *self)?;
         let child_id = self.node_stack.pop().unwrap();
-
-        let id = self.get_fresh_node_id(NodeType::TupleStruct);
-        let type_sym = self.intern_string(name);
-        self.struct_type_table.push((id, type_sym));
-        self.tuple_table.push((id, 0, child_id));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::TupleStruct)?;
+        self.backend.add_struct_type(id, name)?;
+        self.backend.add_tuple(id, 0, child_id)
     }
 
     fn serialize_newtype_variant<T: ?Sized + serde::Serialize>(
@@ -690,26 +747,23 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         _variant_index: u32,
         variant: &'static str,
         value: &T,
-    ) -> std::result::Result<Self::Ok, Self::Error> {
+    ) -> Result<Self::Ok> {
         value.serialize(&mut *self)?;
         let child_id = self.node_stack.pop().unwrap();
 
-        let id = self.get_fresh_node_id(NodeType::TupleVariant);
-        let type_sym = self.intern_string(name);
-        let variant_sym = self.intern_string(variant);
-        self.variant_type_table.push((id, type_sym, variant_sym));
-        self.tuple_table.push((id, 0, child_id));
-        Result::Ok(())
+        let id = self.get_fresh_node_id(NodeType::TupleVariant)?;
+        self.backend.add_variant_type(id, name, variant)?;
+        self.backend.add_tuple(id, 0, child_id)
     }
 
     fn serialize_seq(self, _len_opt: Option<usize>) -> Result<Self::SerializeSeq> {
-        let id = self.get_fresh_node_id(NodeType::Seq);
+        let id = self.get_fresh_node_id(NodeType::Seq)?;
         self.parent_stack.push((id, 0));
         Result::Ok(self)
     }
 
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
-        let id = self.get_fresh_node_id(NodeType::Tuple);
+        let id = self.get_fresh_node_id(NodeType::Tuple)?;
         self.parent_stack.push((id, 0));
         Result::Ok(self)
     }
@@ -718,11 +772,10 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         self,
         name: &'static str,
         _len: usize,
-    ) -> std::result::Result<Self::SerializeTupleStruct, Self::Error> {
-        let id = self.get_fresh_node_id(NodeType::TupleStruct);
+    ) -> Result<Self::SerializeTupleStruct> {
+        let id = self.get_fresh_node_id(NodeType::TupleStruct)?;
         self.parent_stack.push((id, 0));
-        let type_sym = self.intern_string(name);
-        self.struct_type_table.push((id, type_sym));
+        self.backend.add_struct_type(id, name)?;
         Result::Ok(self)
     }
 
@@ -733,16 +786,14 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        let id = self.get_fresh_node_id(NodeType::TupleVariant);
+        let id = self.get_fresh_node_id(NodeType::TupleVariant)?;
         self.parent_stack.push((id, 0));
-        let type_sym = self.intern_string(name);
-        let variant_sym = self.intern_string(variant);
-        self.variant_type_table.push((id, type_sym, variant_sym));
+        self.backend.add_variant_type(id, name, variant)?;
         Result::Ok(self)
     }
 
     fn serialize_map(self, _len_opt: Option<usize>) -> Result<Self::SerializeMap> {
-        let id = self.get_fresh_node_id(NodeType::Map);
+        let id = self.get_fresh_node_id(NodeType::Map)?;
         self.parent_stack.push((id, 0));
         Result::Ok(self)
     }
@@ -752,10 +803,9 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         name: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStruct> {
-        let id = self.get_fresh_node_id(NodeType::Struct);
+        let id = self.get_fresh_node_id(NodeType::Struct)?;
         self.parent_stack.push((id, 0));
-        let type_sym = self.intern_string(name);
-        self.struct_type_table.push((id, type_sym));
+        self.backend.add_struct_type(id, name)?;
         Result::Ok(self)
     }
 
@@ -766,16 +816,14 @@ impl<'a> ser::Serializer for &'a mut DatalogExtractor {
         variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        let id = self.get_fresh_node_id(NodeType::StructVariant);
+        let id = self.get_fresh_node_id(NodeType::StructVariant)?;
         self.parent_stack.push((id, 0));
-        let type_sym = self.intern_string(name);
-        let variant_sym = self.intern_string(variant);
-        self.variant_type_table.push((id, type_sym, variant_sym));
+        self.backend.add_variant_type(id, name, variant)?;
         Result::Ok(self)
     }
 }
 
-impl<'a> ser::SerializeSeq for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeSeq for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -788,7 +836,7 @@ impl<'a> ser::SerializeSeq for &'a mut DatalogExtractor {
     }
 }
 
-impl<'a> ser::SerializeTuple for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeTuple for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -801,7 +849,7 @@ impl<'a> ser::SerializeTuple for &'a mut DatalogExtractor {
     }
 }
 
-impl<'a> ser::SerializeTupleVariant for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeTupleVariant for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -814,7 +862,7 @@ impl<'a> ser::SerializeTupleVariant for &'a mut DatalogExtractor {
     }
 }
 
-impl<'a> ser::SerializeTupleStruct for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeTupleStruct for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -827,7 +875,7 @@ impl<'a> ser::SerializeTupleStruct for &'a mut DatalogExtractor {
     }
 }
 
-impl<'a> ser::SerializeMap for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeMap for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -841,8 +889,7 @@ impl<'a> ser::SerializeMap for &'a mut DatalogExtractor {
         let (parent_id, _) = self.parent_stack.last().unwrap();
         let val_id = self.node_stack.pop().unwrap();
         let key_id = self.node_stack.pop().unwrap();
-        self.map_table.push((*parent_id, key_id, val_id));
-        Result::Ok(())
+        self.backend.add_map(*parent_id, key_id, val_id)
     }
 
     fn end(self) -> result::Result<Self::Ok, Self::Error> {
@@ -850,7 +897,7 @@ impl<'a> ser::SerializeMap for &'a mut DatalogExtractor {
     }
 }
 
-impl<'a> ser::SerializeStruct for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeStruct for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -867,7 +914,7 @@ impl<'a> ser::SerializeStruct for &'a mut DatalogExtractor {
     }
 }
 
-impl<'a> ser::SerializeStructVariant for &'a mut DatalogExtractor {
+impl<'a, 'b> ser::SerializeStructVariant for &'a mut DatalogExtractor<'b> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
