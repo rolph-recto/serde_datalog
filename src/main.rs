@@ -5,7 +5,7 @@ use std::{
     path::Path
 };
 
-use serde_datalog::{DatalogExtractor, SouffleSQLiteBackend};
+use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
 
 #[derive(Parser, Debug)]
 #[command(
@@ -39,7 +39,7 @@ fn main() {
     };
 
     let mut deserializer = serde_json::Deserializer::from_str(&input);
-    let mut souffle_sqlite = SouffleSQLiteBackend::default();
+    let mut souffle_sqlite = souffle_sqlite::Backend::default();
 
     let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
     serde_transcode::transcode(&mut deserializer, &mut extractor).unwrap();
