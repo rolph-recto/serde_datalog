@@ -36,15 +36,30 @@ impl std::error::Error for DatalogExtractionError { }
 
 pub type Result<T> = std::result::Result<T, DatalogExtractionError>;
 
+/// A unique identifier for data.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct NodeId(usize);
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum NodeType {
+    Bool,
+    I8,
+    I16,
+    I32,
+    I64,
+    U8,
+    U16,
+    U32,
+    U64,
+    F32,
+    F64,
+    Char,
+    Str,
+    Bytes,
     Map,
-    Number,
+    NewtypeStruct,
+    NewtypeVariant,
     Seq,
-    String,
     Struct,
     StructVariant,
     Tuple,
@@ -55,30 +70,26 @@ pub enum NodeType {
     UnitVariant,
 }
 
-impl NodeType {
-    fn name(&self) -> String {
-        match self {
-            NodeType::Map => "Map",
-            NodeType::Number => "Number",
-            NodeType::Seq => "Seq",
-            NodeType::String => "String",
-            NodeType::Struct => "Struct",
-            NodeType::StructVariant => "StructVariant",
-            NodeType::Tuple => "Tuple",
-            NodeType::TupleStruct => "TupleStruct",
-            NodeType::TupleVariant => "TupleVariant",
-            NodeType::Unit => "Unit",
-            NodeType::UnitStruct => "UnitStruct",
-            NodeType::UnitVariant => "UnitVariant",
-        }.to_string()
-    }
-}
-
+/// An implementation of `DatalogExtractorBackend` materializes facts generated
+/// by [DatalogExtractor]. These facts can be represented in whatever format
+/// the backend chooses, e.g. a SQLite database, a set of vectors, etc.
 pub trait DatalogExtractorBackend {
     type Ok;
     fn add_node(&mut self, node: NodeId, node_type: NodeType) -> Result<Self::Ok>;
-    fn add_number(&mut self, node: NodeId, value: isize) -> Result<Self::Ok>;
-    fn add_string(&mut self, node: NodeId, value: &str) -> Result<Self::Ok>;
+    fn add_bool(&mut self, node: NodeId, value: bool) -> Result<Self::Ok>;
+    fn add_i8(&mut self, node: NodeId, value: i8) -> Result<Self::Ok>;
+    fn add_i16(&mut self, node: NodeId, value: i16) -> Result<Self::Ok>;
+    fn add_i32(&mut self, node: NodeId, value: i32) -> Result<Self::Ok>;
+    fn add_i64(&mut self, node: NodeId, value: i64) -> Result<Self::Ok>;
+    fn add_u8(&mut self, node: NodeId, value: u8) -> Result<Self::Ok>;
+    fn add_u16(&mut self, node: NodeId, value: u16) -> Result<Self::Ok>;
+    fn add_u32(&mut self, node: NodeId, value: u32) -> Result<Self::Ok>;
+    fn add_u64(&mut self, node: NodeId, value: u64) -> Result<Self::Ok>;
+    fn add_f32(&mut self, node: NodeId, value: f32) -> Result<Self::Ok>;
+    fn add_f64(&mut self, node: NodeId, value: f64) -> Result<Self::Ok>;
+    fn add_char(&mut self, node: NodeId, value: char) -> Result<Self::Ok>;
+    fn add_str(&mut self, node: NodeId, value: &str) -> Result<Self::Ok>;
+    fn add_bytes(&mut self, node: NodeId, value: &[u8]) -> Result<Self::Ok>;
     fn add_map(&mut self, node: NodeId, key: NodeId, value: NodeId) -> Result<Self::Ok>;
     fn add_struct_type(&mut self, node: NodeId, struct_name: &str) -> Result<Self::Ok>;
     fn add_struct(&mut self, node: NodeId, key: &str, value: NodeId) -> Result<Self::Ok>;
@@ -87,6 +98,50 @@ pub trait DatalogExtractorBackend {
     fn add_tuple(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<Self::Ok>;
 }
 
+/// Implementation of [serde::Serializer] that extracts facts from a data structure.
+/// The extractor generates facts from a data structure through flattening:
+/// it generates unique identifiers, and references within a data structure
+/// are ["unswizzled"](https://en.wikipedia.org/wiki/Pointer_swizzling)
+/// into identifiers.
+/// 
+/// Note that the extractor does *not* contain an explicit representation of
+/// the facts that it generates from a data structure. Instead, it calls out
+/// to a [DatalogExtractorBackend] to materialize facts.
+/// 
+/// # Example
+/// 
+/// Consider the following enum type:
+/// 
+/// ```
+/// enum Foo {
+///     A(Box<Foo>),
+///     B(i64)
+/// }
+/// ```
+/// 
+/// Then consider the enum instance `Foo::A(Foo::B(10))`. The extractor can
+/// generate the following facts to represent this data structure:
+/// 
+/// - Element 1 is a newtype variant
+/// - Element 1 has type `Foo` and variant name `A`
+/// - The first field of Element 1 references Element 2
+/// - Element 2 is a newtype variant
+/// - Element 2 has type `Foo` and variant name `B`
+/// - The first field of Element 2 references Element 3
+/// - Element 3 is an i64
+/// - Element 3 has value 10
+/// 
+/// Each of these facts are materialized by calling into the appropriate
+/// method of an implementation of [DatalogExtractorBackend]:
+/// 
+/// - `add_node(NodeId(1), NodeType::TupleVariant)`
+/// - `add_variant_type(NodeId(1), "Foo", "A")`
+/// - `add_tuple(NodeId(1), 0, NodeId(2))`
+/// - `add_node(NodeId(2), NodeType::TupleVariant)`
+/// - `add_variant_type(NodeId(1), "Foo", "B")`
+/// - `add_tuple(NodeId(2), 0, NodeId(3))`
+/// - `add_node(NodeId(3), NodeType::I64)`
+/// - `add_i64(NodeId(3), 10)`
 pub struct DatalogExtractor<'a> {
     cur_node_id: NodeId,
     node_stack: Vec<NodeId>,
@@ -160,70 +215,74 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     type SerializeStruct = Self;
     type SerializeStructVariant = Self;
 
-    fn serialize_bool(self, v: bool) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, if v { 1 } else { 0 })
+    fn serialize_bool(self, value: bool) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::Bool)?;
+        self.backend.add_bool(id, value)
     }
 
-    fn serialize_i8(self, v: i8) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_i8(self, value: i8) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::I8)?;
+        self.backend.add_i8(id, value)
     }
 
-    fn serialize_i16(self, v: i16) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_i16(self, value: i16) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::I16)?;
+        self.backend.add_i16(id, value)
     }
 
-    fn serialize_i32(self, v: i32) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_i32(self, value: i32) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::I32)?;
+        self.backend.add_i32(id, value)
     }
 
-    fn serialize_i64(self, v: i64) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_i64(self, value: i64) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::I64)?;
+        self.backend.add_i64(id, value)
     }
 
-    fn serialize_u8(self, v: u8) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_u8(self, value: u8) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::U8)?;
+        self.backend.add_u8(id, value)
     }
 
-    fn serialize_u16(self, v: u16) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_u16(self, value: u16) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::U16)?;
+        self.backend.add_u16(id, value)
     }
 
-    fn serialize_u32(self, v: u32) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_u32(self, value: u32) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::U32)?;
+        self.backend.add_u32(id, value)
     }
 
-    fn serialize_u64(self, v: u64) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::Number)?;
-        self.backend.add_number(id, v as isize)
+    fn serialize_u64(self, value: u64) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::U64)?;
+        self.backend.add_u64(id, value)
     }
 
-    fn serialize_f32(self, _v: f32) -> Result<Self::Ok> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+    fn serialize_f32(self, value: f32) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::F32)?;
+        self.backend.add_f32(id, value)
     }
 
-    fn serialize_f64(self, _v: f64) -> Result<Self::Ok> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+    fn serialize_f64(self, value: f64) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::F64)?;
+        self.backend.add_f64(id, value)
     }
 
-    fn serialize_char(self, v: char) -> Result<Self::Ok> {
-        self.serialize_str(&v.to_string())
+    fn serialize_char(self, value: char) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::Char)?;
+        self.backend.add_char(id, value)
     }
 
-    fn serialize_str(self, v: &str) -> Result<Self::Ok> {
-        let id = self.get_fresh_node_id(NodeType::String)?;
-        self.backend.add_string(id, v)
+    fn serialize_str(self, value: &str) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::Str)?;
+        self.backend.add_str(id, value)
     }
 
-    fn serialize_bytes(self, _v: &[u8]) -> Result<Self::Ok> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+    fn serialize_bytes(self, value: &[u8]) -> Result<Self::Ok> {
+        let id = self.get_fresh_node_id(NodeType::Bytes)?;
+        self.backend.add_bytes(id, value)
     }
 
     fn serialize_none(self) -> Result<Self::Ok> {
@@ -262,7 +321,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     ) -> Result<Self::Ok> {
         value.serialize(&mut *self)?;
         let child_id = self.node_stack.pop().unwrap();
-        let id = self.get_fresh_node_id(NodeType::TupleStruct)?;
+        let id = self.get_fresh_node_id(NodeType::NewtypeStruct)?;
         self.backend.add_struct_type(id, name)?;
         self.backend.add_tuple(id, 0, child_id)
     }
@@ -277,7 +336,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
         value.serialize(&mut *self)?;
         let child_id = self.node_stack.pop().unwrap();
 
-        let id = self.get_fresh_node_id(NodeType::TupleVariant)?;
+        let id = self.get_fresh_node_id(NodeType::NewtypeVariant)?;
         self.backend.add_variant_type(id, name, variant)?;
         self.backend.add_tuple(id, 0, child_id)
     }

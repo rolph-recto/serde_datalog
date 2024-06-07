@@ -1,10 +1,13 @@
 use std::collections::HashMap;
 
-use crate::{NodeId, DatalogExtractorBackend, NodeType, Result};
+use crate::{NodeId, DatalogExtractorBackend, NodeType, Result, DatalogExtractionError};
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 struct SymbolId(usize);
 
+/// DatalogExtractorBackend impl that stores facts in a SQLite database.
+/// The database conforms to the input format for [Souffle](https://souffle-lang.github.io/),
+/// a high-performance Datalog implementation.
 pub struct Backend {
     cur_symbol_id: SymbolId,
     symbol_table: HashMap<String, SymbolId>,
@@ -409,17 +412,102 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
     type Ok = ();
 
     fn add_node(&mut self, node: NodeId, node_type: NodeType) -> Result<()> {
-        let node_type_sym = self.intern_string(&node_type.name());
+        let table_name: &str = match node_type {
+            NodeType::Bool |
+            NodeType::I8 | NodeType::I16 | NodeType::I32 | NodeType::I64 |
+            NodeType::U8 | NodeType::U16 | NodeType::U32 | NodeType::U64 => {
+                "Number"
+            },
+
+            NodeType::Char | NodeType::Str => {
+                "Str"
+            }
+
+            NodeType::F32 | NodeType::F64 | NodeType::Bytes => {
+                return Result::Err(DatalogExtractionError::UnextractableData);
+            }
+
+            NodeType::Map => "Map",
+            NodeType::Seq => "Seq",
+            NodeType::Struct => "Struct",
+            NodeType::StructVariant => "StructVariant",
+            NodeType::Tuple => "Tuple",
+            NodeType::TupleStruct => "TupleStruct",
+            NodeType::TupleVariant => "TupleVariant",
+            NodeType::Unit => "Unit",
+            NodeType::UnitStruct => "UnitStruct",
+            NodeType::UnitVariant => "UnitVariant",
+            NodeType::NewtypeStruct => "NewtypeStruct",
+            NodeType::NewtypeVariant => "NewtypeVariant"
+        };
+
+        let node_type_sym = self.intern_string(table_name);
         self.type_table.push((node, node_type_sym));
         Result::Ok(())
     }
 
-    fn add_number(&mut self, node: NodeId, value: isize) -> Result<()> {
-        self.number_table.push((node, value));
+    fn add_bool(&mut self, node: NodeId, value: bool) -> Result<Self::Ok> {
+        self.number_table.push((node, if value { 1 } else { 0 }));
         Result::Ok(())
     }
 
-    fn add_string(&mut self, node: NodeId, value: &str) -> Result<()> {
+    fn add_i8(&mut self, node: NodeId, value: i8) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_i16(&mut self, node: NodeId, value: i16) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_i32(&mut self, node: NodeId, value: i32) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_i64(&mut self, node: NodeId, value: i64) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_u8(&mut self, node: NodeId, value: u8) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_u16(&mut self, node: NodeId, value: u16) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_u32(&mut self, node: NodeId, value: u32) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_u64(&mut self, node: NodeId, value: u64) -> Result<Self::Ok> {
+        self.number_table.push((node, value as isize));
+        Result::Ok(())
+    }
+
+    fn add_f32(&mut self, _node: NodeId, _value: f32) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
+
+    fn add_f64(&mut self, _node: NodeId, _value: f64) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
+
+    fn add_bytes(&mut self, _node: NodeId, _value: &[u8]) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
+
+    fn add_char(&mut self, node: NodeId, value: char) -> Result<Self::Ok> {
+        self.add_str(node, &value.to_string())
+    }
+
+    fn add_str(&mut self, node: NodeId, value: &str) -> Result<()> {
         let value_sym = self.intern_string(value);
         self.string_table.push((node, value_sym));
         Result::Ok(())
