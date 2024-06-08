@@ -16,7 +16,7 @@
 //! 
 //! Consider the following enum type:
 //! 
-//! ```
+//! ```ignore
 //! enum Foo {
 //!     A(Box<Foo>),
 //!     B(i64)
@@ -44,15 +44,15 @@
 //! For each of these facts, the extractor will make the following calls to an
 //! implementation of [DatalogExtractorBackend]:
 //! 
-//! ```
-//! backend.add_elem(elemId(1), elemType::TupleVariant)
-//! backend.add_variant_type(elemId(1), "Foo", "A")
-//! backend.add_tuple(elemId(1), 0, elemId(2))
-//! backend.add_elem(elemId(2), elemType::TupleVariant)
-//! backend.add_variant_type(elemId(1), "Foo", "B")
-//! backend.add_tuple(elemId(2), 0, elemId(3))
-//! backend.add_elem(elemId(3), elemType::I64)
-//! backend.add_i64(elemId(3), 10)
+//! ```ignore
+//! backend.add_elem(ElemId(1), elemType::TupleVariant)
+//! backend.add_variant_type(ElemId(1), "Foo", "A")
+//! backend.add_tuple(ElemId(1), 0, ElemId(2))
+//! backend.add_elem(ElemId(2), elemType::TupleVariant)
+//! backend.add_variant_type(ElemId(1), "Foo", "B")
+//! backend.add_tuple(ElemId(2), 0, ElemId(3))
+//! backend.add_elem(ElemId(3), elemType::I64)
+//! backend.add_i64(ElemId(3), 10)
 //! ```
 
 use serde::ser;
@@ -303,7 +303,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Bool)
     /// add_bool(id, value)
     /// ```
@@ -316,7 +316,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::I8)
     /// add_i8(id, value)
     /// ```
@@ -329,7 +329,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::I16)
     /// add_i16(id, value)
     /// ```
@@ -342,7 +342,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::I32)
     /// add_i32(id, value)
     /// ```
@@ -355,7 +355,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::I64)
     /// add_i64(id, value)
     /// ```
@@ -368,7 +368,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::U8)
     /// add_u8(id, value)
     /// ```
@@ -381,7 +381,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::I8)
     /// add_u16(id, value)
     /// ```
@@ -394,7 +394,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::U32)
     /// add_u32(id, value)
     /// ```
@@ -407,7 +407,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::U64)
     /// add_u64(id, value)
     /// ```
@@ -420,7 +420,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::F32)
     /// add_f32(id, value)
     /// ```
@@ -433,7 +433,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::F64)
     /// add_f64(id, value)
     /// ```
@@ -446,7 +446,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Char)
     /// add_char(id, value)
     /// ```
@@ -459,7 +459,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following call to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Str)
     /// add_str(id, value)
     /// ```
@@ -472,7 +472,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Bytes)
     /// add_bytes(id, value)
     /// ```
@@ -485,7 +485,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id`, this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::UnitVariant)
     /// add_variant_type(id, "Option", "None")
     /// ```
@@ -498,7 +498,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::NewtypeVariant)
     /// add_variant_type(id, "Option", "Some")
     /// add_tuple_entry(id, 0, value_id)
@@ -511,7 +511,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id` this will make the following call to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Unit)
     /// ```
     fn serialize_unit(self) -> Result<Self::Ok> {
@@ -523,7 +523,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id` this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::UnitStruct)
     /// add_struct_type(id, name)
     /// ```
@@ -536,7 +536,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// Given a fresh element ID `id` this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::UnitVariant)
     /// add_variant_type(id, name, variant)
     /// ```
@@ -556,7 +556,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::NewtypeStruct)
     /// add_struct_type(id, name)
     /// add_tuple_entry(id, 0, value_id)
@@ -578,7 +578,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::NewtypeVariant)
     /// add_variant_type(id, name, variant)
     /// add_tuple_entry(id, 0, value_id)
@@ -603,7 +603,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Seq)
     /// ```
     fn serialize_seq(self, _len_opt: Option<usize>) -> Result<Self::SerializeSeq> {
@@ -617,7 +617,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Tuple)
     /// ```
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
@@ -631,7 +631,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::TupleStruct)
     /// add_struct_type(id, name)
     /// ```
@@ -651,7 +651,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::TupleVariant)
     /// add_variant_type(id, name, variant)
     /// ```
@@ -673,7 +673,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Map)
     /// ```
     fn serialize_map(self, _len_opt: Option<usize>) -> Result<Self::SerializeMap> {
@@ -687,7 +687,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::Struct)
     /// add_struct_type(id, name)
     /// ```
@@ -707,7 +707,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_elem(id, ElemType::StructVariant)
     /// add_variant_type(id, name, variant)
     /// ```
@@ -736,7 +736,7 @@ impl<'a, 'b> ser::SerializeSeq for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_seq_entry(parent_id, pos, value_id)
     /// ```
     fn serialize_element<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
@@ -759,7 +759,7 @@ impl<'a, 'b> ser::SerializeTuple for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_tuple_entry(parent_id, pos, value_id)
     /// ```
     fn serialize_element<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
@@ -782,7 +782,7 @@ impl<'a, 'b> ser::SerializeTupleVariant for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_tuple_entry(parent_id, pos, value_id)
     /// ```
     fn serialize_field<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
@@ -805,7 +805,7 @@ impl<'a, 'b> ser::SerializeTupleStruct for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_tuple_entry(parent_id, pos, value_id)
     /// ```
     fn serialize_field<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
@@ -833,7 +833,7 @@ impl<'a, 'b> ser::SerializeMap for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_map_entry(parent_id, key_id, value_id)
     /// ```
     fn serialize_value<T: ?Sized + serde::Serialize>(&mut self, value: &T) -> Result<Self::Ok> {
@@ -859,7 +859,7 @@ impl<'a, 'b> ser::SerializeStruct for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_struct_entry(parent_id, key, value_id)
     /// ```
     fn serialize_field<T: ?Sized + serde::Serialize>(
@@ -885,7 +885,7 @@ impl<'a, 'b> ser::SerializeStructVariant for &'a mut DatalogExtractor<'b> {
     /// this will make the following calls to
     /// an implementation of [DatalogExtractorBackend]:
     /// 
-    /// ```
+    /// ```ignore
     /// add_struct_entry(parent_id, key, value_id)
     /// ```
     fn serialize_field<T: ?Sized + serde::Serialize>(
