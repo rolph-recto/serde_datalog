@@ -412,36 +412,68 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
     type Ok = ();
 
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
-        let table_name: &str = match elem_type {
-            ElemType::Bool |
+        let type_name: &str;
+
+        match elem_type {
+            ElemType::Bool => {
+                type_name = "Bool";
+            }
+
             ElemType::I8 | ElemType::I16 | ElemType::I32 | ElemType::I64 |
             ElemType::U8 | ElemType::U16 | ElemType::U32 | ElemType::U64 => {
-                "Number"
+                type_name = "Number";
             },
 
             ElemType::Char | ElemType::Str => {
-                "Str"
+                type_name = "Str";
             }
 
             ElemType::F32 | ElemType::F64 | ElemType::Bytes => {
                 return Result::Err(DatalogExtractionError::UnextractableData);
             }
 
-            ElemType::Map => "Map",
-            ElemType::Seq => "Seq",
-            ElemType::Struct => "Struct",
-            ElemType::StructVariant => "StructVariant",
-            ElemType::Tuple => "Tuple",
-            ElemType::TupleStruct => "TupleStruct",
-            ElemType::TupleVariant => "TupleVariant",
-            ElemType::Unit => "Unit",
-            ElemType::UnitStruct => "UnitStruct",
-            ElemType::UnitVariant => "UnitVariant",
-            ElemType::NewtypeStruct => "NewtypeStruct",
-            ElemType::NewtypeVariant => "NewtypeVariant"
+            ElemType::Map => {
+                type_name = "Map";
+            }
+
+            ElemType::Seq => {
+                type_name = "Seq";
+            }
+
+            ElemType::Struct => {
+                type_name = "Struct";
+            }
+
+            ElemType::StructVariant => {
+                type_name = "StructVariant";
+            }
+
+            ElemType::Tuple => {
+                type_name = "Tuple";
+            }
+
+            ElemType::TupleStruct | ElemType::NewtypeStruct => {
+                type_name = "TupleStruct";
+            }
+
+            ElemType::TupleVariant | ElemType::NewtypeVariant => {
+                type_name = "TupleVariant";
+            }
+
+            ElemType::Unit => {
+                type_name = "Unit";
+            }
+
+            ElemType::UnitStruct => {
+                type_name = "UnitStruct";
+            }
+
+            ElemType::UnitVariant => {
+                type_name = "UnitVariant";
+            }
         };
 
-        let elem_type_sym = self.intern_string(table_name);
+        let elem_type_sym = self.intern_string(type_name);
         self.type_table.push((elem, elem_type_sym));
         Result::Ok(())
     }
@@ -451,37 +483,7 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
         Result::Ok(())
     }
 
-    fn add_i8(&mut self, elem: ElemId, value: i8) -> Result<Self::Ok> {
-        self.number_table.push((elem, value as isize));
-        Result::Ok(())
-    }
-
-    fn add_i16(&mut self, elem: ElemId, value: i16) -> Result<Self::Ok> {
-        self.number_table.push((elem, value as isize));
-        Result::Ok(())
-    }
-
-    fn add_i32(&mut self, elem: ElemId, value: i32) -> Result<Self::Ok> {
-        self.number_table.push((elem, value as isize));
-        Result::Ok(())
-    }
-
     fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<Self::Ok> {
-        self.number_table.push((elem, value as isize));
-        Result::Ok(())
-    }
-
-    fn add_u8(&mut self, elem: ElemId, value: u8) -> Result<Self::Ok> {
-        self.number_table.push((elem, value as isize));
-        Result::Ok(())
-    }
-
-    fn add_u16(&mut self, elem: ElemId, value: u16) -> Result<Self::Ok> {
-        self.number_table.push((elem, value as isize));
-        Result::Ok(())
-    }
-
-    fn add_u32(&mut self, elem: ElemId, value: u32) -> Result<Self::Ok> {
         self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
@@ -489,22 +491,6 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
     fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<Self::Ok> {
         self.number_table.push((elem, value as isize));
         Result::Ok(())
-    }
-
-    fn add_f32(&mut self, _elem: ElemId, _value: f32) -> Result<Self::Ok> {
-        Result::Err(DatalogExtractionError::UnextractableData)
-    }
-
-    fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<Self::Ok> {
-        Result::Err(DatalogExtractionError::UnextractableData)
-    }
-
-    fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<Self::Ok> {
-        Result::Err(DatalogExtractionError::UnextractableData)
-    }
-
-    fn add_char(&mut self, elem: ElemId, value: char) -> Result<Self::Ok> {
-        self.add_str(elem, &value.to_string())
     }
 
     fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()> {

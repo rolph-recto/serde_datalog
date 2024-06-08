@@ -146,80 +146,158 @@ pub trait DatalogExtractorBackend {
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<Self::Ok>;
 
     /// Materialize fact that element with ID `elem` is a boolean with value `value`.
-    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<Self::Ok>;
+    fn add_bool(&mut self, _elem: ElemId, _value: bool) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is an i8 with value `value`.
-    fn add_i8(&mut self, elem: ElemId, value: i8) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation forwards to [add_i64][Self::add_i64].
+    fn add_i8(&mut self, elem: ElemId, value: i8) -> Result<Self::Ok> {
+        self.add_i64(elem, value as i64)
+    }
 
     /// Materialize fact that element with ID `elem` is an i16 with value `value`.
-    fn add_i16(&mut self, elem: ElemId, value: i16) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation forwards to [add_i64][Self::add_i64].
+    fn add_i16(&mut self, elem: ElemId, value: i16) -> Result<Self::Ok> {
+        self.add_i64(elem, value as i64)
+    }
 
     /// Materialize fact that element with ID `elem` is an i32 with value `value`.
-    fn add_i32(&mut self, elem: ElemId, value: i32) -> Result<Self::Ok>;
+    fn add_i32(&mut self, elem: ElemId, value: i32) -> Result<Self::Ok> {
+        self.add_i64(elem, value as i64)
+    }
 
     /// Materialize fact that element with ID `elem` is an i64 with value `value`.
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<Self::Ok>;
 
     /// Materialize fact that element with ID `elem` is an u8 with value `value`.
-    fn add_u8(&mut self, elem: ElemId, value: u8) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation forwards to [add_u64][Self::add_u64].
+    fn add_u8(&mut self, elem: ElemId, value: u8) -> Result<Self::Ok> {
+        self.add_u64(elem, value as u64)
+    }
 
     /// Materialize fact that element with ID `elem` is an u16 with value `value`.
-    fn add_u16(&mut self, elem: ElemId, value: u16) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation forwards to [add_u64][Self::add_u64].
+    fn add_u16(&mut self, elem: ElemId, value: u16) -> Result<Self::Ok> {
+        self.add_u64(elem, value as u64)
+    }
 
     /// Materialize fact that element with ID `elem` is an u32 with value `value`.
-    fn add_u32(&mut self, elem: ElemId, value: u32) -> Result<Self::Ok>;
+    fn add_u32(&mut self, elem: ElemId, value: u32) -> Result<Self::Ok> {
+        self.add_u64(elem, value as u64)
+    }
 
     /// Materialize fact that element with ID `elem` is an u64 with value `value`.
-    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_u64(&mut self, _elem: ElemId, _value: u64) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a f32 with value `value`.
-    fn add_f32(&mut self, elem: ElemId, value: f32) -> Result<Self::Ok>;
+    fn add_f32(&mut self, elem: ElemId, value: f32) -> Result<Self::Ok> {
+        self.add_f64(elem, value as f64)
+    }
 
     /// Materialize fact that element with ID `elem` is a f64 with value `value`.
-    fn add_f64(&mut self, elem: ElemId, value: f64) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a char with value `value`.
-    fn add_char(&mut self, elem: ElemId, value: char) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation forwards to [add_str][Self::add_str].
+    fn add_char(&mut self, elem: ElemId, value: char) -> Result<Self::Ok> {
+        self.add_str(elem, &value.to_string())
+    }
 
     /// Materialize fact that element with ID `elem` is a str with value `value`.
-    fn add_str(&mut self, elem: ElemId, value: &str) -> Result<Self::Ok>;
+    fn add_str(&mut self, _elem: ElemId, _value: &str) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a byte array with value `value`.
-    fn add_bytes(&mut self, elem: ElemId, value: &[u8]) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a map with
     /// key `key` mapped to value `value`.
-    fn add_map_entry(&mut self, elem: ElemId, key: ElemId, value: ElemId) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_map_entry(&mut self, _elem: ElemId, _key: ElemId, _value: ElemId) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a struct
     /// with type name `struct_name`. The element can have element type of either
     /// [ElemType::NewtypeStruct], [ElemType::Struct], [ElemType::TupleStruct],
     /// or [ElemType::UnitStruct].
-    fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_struct_type(&mut self, _elem: ElemId, _struct_name: &str) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a struct, 
     /// with value `value` at key `key`.
     /// The element can have element type [ElemType::Struct] or
     /// [ElemType::StructVariant].
-    fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_struct_entry(&mut self, _elem: ElemId, _key: &str, _value: ElemId) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a sequence
     /// with value `value` at position `pos`.
-    fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_seq_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is an enum variant
     /// with type name `type_name` and variant name `variant_name`.
     /// The element can have element type 
     /// [ElemType::NewtypeVariant], [ElemType::StructVariant],
     /// [ElemType::TupleVariant], or [ElemType::UnitVariant].
-    fn add_variant_type(&mut self, elem: ElemId, type_name: &str, variant_name: &str) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_variant_type(&mut self, _elem: ElemId, _type_name: &str, _variant_name: &str) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is a tuple with value
     /// `value` at position `pos`.
     /// The element can have element type [ElemType::NewtypeStruct],
     /// [ElemType::NewtypeVariant], [ElemType::Tuple], [ElemType::TupleStruct],
     /// or [ElemType::TupleVariant].
-    fn add_tuple_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<Self::Ok>;
+    /// 
+    /// The default implementation returns an
+    /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
+    fn add_tuple_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<Self::Ok> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 }
 
 /// Implementation of [serde::Serializer] that extracts facts from a data structure.
