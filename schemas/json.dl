@@ -2,15 +2,15 @@
 
 #include "serde.dl"
 
-.decl jsonNumber(id: NodeId, value: number) inline
+.decl jsonNumber(id: ElemId, value: number) inline
 jsonNumber(id, value) :- number(id, value).
 
-.decl jsonString(id: NodeId, value: symbol) inline
+.decl jsonString(id: ElemId, value: symbol) inline
 jsonString(id, value) :- string(id, value).
 
-.decl jsonList(id: NodeId, pos: number, value: NodeId) inline
+.decl jsonList(id: ElemId, pos: number, value: ElemId) inline
 jsonList(id, pos, value) :- seq(id, pos, value).
 
 // JSON keys are always strings
-.decl jsonRecord(id: NodeId, key: symbol, value: NodeId) inline
+.decl jsonRecord(id: ElemId, key: symbol, value: ElemId) inline
 jsonRecord(id, key, value) :- map(id, keyId, value), string(keyId, key).
