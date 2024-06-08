@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{NodeId, DatalogExtractorBackend, NodeType, Result, DatalogExtractionError};
+use crate::{ElemId, DatalogExtractorBackend, ElemType, Result, DatalogExtractionError};
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 struct SymbolId(usize);
@@ -12,32 +12,32 @@ pub struct Backend {
     cur_symbol_id: SymbolId,
     symbol_table: HashMap<String, SymbolId>,
 
-    // (node, node type)
-    type_table: Vec<(NodeId, SymbolId)>,
+    // (elem, elem type)
+    type_table: Vec<(ElemId, SymbolId)>,
 
-    // (node, value)
-    number_table: Vec<(NodeId, isize)>,
+    // (elem, value)
+    number_table: Vec<(ElemId, isize)>,
 
-    // (node, symbol)
-    string_table: Vec<(NodeId, SymbolId)>,
+    // (elem, symbol)
+    string_table: Vec<(ElemId, SymbolId)>,
 
-    // (node, key, value)
-    map_table: Vec<(NodeId, NodeId, NodeId)>,
+    // (elem, key, value)
+    map_table: Vec<(ElemId, ElemId, ElemId)>,
 
-    // (node, struct name)
-    struct_type_table: Vec<(NodeId, SymbolId)>,
+    // (elem, struct name)
+    struct_type_table: Vec<(ElemId, SymbolId)>,
 
-    // (node, field name, value node)
-    struct_table: Vec<(NodeId, SymbolId, NodeId)>,
+    // (elem, field name, value elem)
+    struct_table: Vec<(ElemId, SymbolId, ElemId)>,
 
-    // (node, index, value)
-    seq_table: Vec<(NodeId, usize, NodeId)>,
+    // (elem, index, value)
+    seq_table: Vec<(ElemId, usize, ElemId)>,
 
-    // (node, enum name, variant name)
-    variant_type_table: Vec<(NodeId, SymbolId, SymbolId)>,
+    // (elem, enum name, variant name)
+    variant_type_table: Vec<(ElemId, SymbolId, SymbolId)>,
 
-    // (node, index, value)
-    tuple_table: Vec<(NodeId, usize, NodeId)>,
+    // (elem, index, value)
+    tuple_table: Vec<(ElemId, usize, ElemId)>,
 }
 
 impl Default for Backend {
@@ -85,12 +85,12 @@ impl Backend {
         }
 
         if !self.type_table.is_empty() {
-            println!("{:^33}", "Node Table");
+            println!("{:^33}", "elem Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "Node Id", "Node Type");
+            println!("{:<15} | {:<15}", "elem Id", "elem Type");
             println!("---------------------------------");
-            for (node, node_type) in self.type_table.iter() {
-                println!("{:<15} | {:<15?}", node.0, node_type.0);
+            for (elem, elem_type) in self.type_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, elem_type.0);
             }
             println!();
         }
@@ -98,10 +98,10 @@ impl Backend {
         if !self.number_table.is_empty() {
             println!("{:^33}", "Number Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "Node Id", "Number");
+            println!("{:<15} | {:<15}", "elem Id", "Number");
             println!("---------------------------------");
-            for (node, number) in self.number_table.iter() {
-                println!("{:<15} | {:<15?}", node.0, number);
+            for (elem, number) in self.number_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, number);
             }
             println!();
         }
@@ -109,10 +109,10 @@ impl Backend {
         if !self.string_table.is_empty() {
             println!("{:^33}", "String Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "Node Id", "String");
+            println!("{:<15} | {:<15}", "elem Id", "String");
             println!("---------------------------------");
-            for (node, str) in self.string_table.iter() {
-                println!("{:<15} | {:<15?}", node.0, str.0);
+            for (elem, str) in self.string_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, str.0);
             }
             println!();
         }
@@ -120,10 +120,10 @@ impl Backend {
         if !self.map_table.is_empty() {
             println!("{:^51}", "Map Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "Node Id", "Key", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Key", "Value");
             println!("---------------------------------------------------");
-            for (node, key, val) in self.map_table.iter() {
-                println!("{:<15} | {:<15?} | {:<15?}", node.0, key.0, val.0);
+            for (elem, key, val) in self.map_table.iter() {
+                println!("{:<15} | {:<15?} | {:<15?}", elem.0, key.0, val.0);
             }
             println!();
         }
@@ -131,10 +131,10 @@ impl Backend {
         if !self.struct_type_table.is_empty() {
             println!("{:^33}", "Struct Type Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "Node Id", "Struct Type");
+            println!("{:<15} | {:<15}", "elem Id", "Struct Type");
             println!("---------------------------------");
-            for (node, struct_type) in self.string_table.iter() {
-                println!("{:<15} | {:<15?}", node.0, struct_type.0);
+            for (elem, struct_type) in self.string_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, struct_type.0);
             }
             println!();
         }
@@ -142,10 +142,10 @@ impl Backend {
         if !self.struct_table.is_empty() {
             println!("{:^51}", "Struct Field Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "Node Id", "Field", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Field", "Value");
             println!("---------------------------------------------------");
-            for (node, field, val) in self.struct_table.iter() {
-                println!("{:<15} | {:<15?} | {:<15?}", node.0, field.0, val.0);
+            for (elem, field, val) in self.struct_table.iter() {
+                println!("{:<15} | {:<15?} | {:<15?}", elem.0, field.0, val.0);
             }
             println!();
         }
@@ -153,10 +153,10 @@ impl Backend {
         if !self.seq_table.is_empty() {
             println!("{:^51}", "Seq Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "Node Id", "Index", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Index", "Value");
             println!("---------------------------------------------------");
-            for (node, index, val) in self.seq_table.iter() {
-                println!("{:<15} | {:<15?} | {:<15?}", node.0, index, val.0);
+            for (elem, index, val) in self.seq_table.iter() {
+                println!("{:<15} | {:<15?} | {:<15?}", elem.0, index, val.0);
             }
             println!();
         }
@@ -164,10 +164,10 @@ impl Backend {
         if !self.variant_type_table.is_empty() {
             println!("{:^51}", "Variant Type Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "Node Id", "Enum Type", "Variant Name");
+            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Enum Type", "Variant Name");
             println!("---------------------------------------------------");
-            for (node, enum_type, variant_name) in self.variant_type_table.iter() {
-                println!("{:<15} | {:<15?} | {:<15?}", node.0, enum_type.0, variant_name.0);
+            for (elem, enum_type, variant_name) in self.variant_type_table.iter() {
+                println!("{:<15} | {:<15?} | {:<15?}", elem.0, enum_type.0, variant_name.0);
             }
             println!();
         }
@@ -175,10 +175,10 @@ impl Backend {
         if !self.tuple_table.is_empty() {
             println!("{:^51}", "Tuple Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "Node Id", "Index", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Index", "Value");
             println!("---------------------------------------------------");
-            for (node, index, val) in self.tuple_table.iter() {
-                println!("{:<15} | {:<15?} | {:<15?}", node.0, index, val.0);
+            for (elem, index, val) in self.tuple_table.iter() {
+                println!("{:<15} | {:<15?} | {:<15?}", elem.0, index, val.0);
             }
             println!();
         }
@@ -328,8 +328,8 @@ impl Backend {
                 "INSERT INTO _type (id, type) VALUES (?1, ?2);",
             )?;
 
-        for (id, node_type) in self.type_table.iter() {
-            insert_type_table.execute((id.0, node_type.0))?;
+        for (id, elem_type) in self.type_table.iter() {
+            insert_type_table.execute((id.0, elem_type.0))?;
         }
 
         let mut insert_number_table =
@@ -411,139 +411,139 @@ impl Backend {
 impl<'a> DatalogExtractorBackend for &'a mut Backend {
     type Ok = ();
 
-    fn add_node(&mut self, node: NodeId, node_type: NodeType) -> Result<()> {
-        let table_name: &str = match node_type {
-            NodeType::Bool |
-            NodeType::I8 | NodeType::I16 | NodeType::I32 | NodeType::I64 |
-            NodeType::U8 | NodeType::U16 | NodeType::U32 | NodeType::U64 => {
+    fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
+        let table_name: &str = match elem_type {
+            ElemType::Bool |
+            ElemType::I8 | ElemType::I16 | ElemType::I32 | ElemType::I64 |
+            ElemType::U8 | ElemType::U16 | ElemType::U32 | ElemType::U64 => {
                 "Number"
             },
 
-            NodeType::Char | NodeType::Str => {
+            ElemType::Char | ElemType::Str => {
                 "Str"
             }
 
-            NodeType::F32 | NodeType::F64 | NodeType::Bytes => {
+            ElemType::F32 | ElemType::F64 | ElemType::Bytes => {
                 return Result::Err(DatalogExtractionError::UnextractableData);
             }
 
-            NodeType::Map => "Map",
-            NodeType::Seq => "Seq",
-            NodeType::Struct => "Struct",
-            NodeType::StructVariant => "StructVariant",
-            NodeType::Tuple => "Tuple",
-            NodeType::TupleStruct => "TupleStruct",
-            NodeType::TupleVariant => "TupleVariant",
-            NodeType::Unit => "Unit",
-            NodeType::UnitStruct => "UnitStruct",
-            NodeType::UnitVariant => "UnitVariant",
-            NodeType::NewtypeStruct => "NewtypeStruct",
-            NodeType::NewtypeVariant => "NewtypeVariant"
+            ElemType::Map => "Map",
+            ElemType::Seq => "Seq",
+            ElemType::Struct => "Struct",
+            ElemType::StructVariant => "StructVariant",
+            ElemType::Tuple => "Tuple",
+            ElemType::TupleStruct => "TupleStruct",
+            ElemType::TupleVariant => "TupleVariant",
+            ElemType::Unit => "Unit",
+            ElemType::UnitStruct => "UnitStruct",
+            ElemType::UnitVariant => "UnitVariant",
+            ElemType::NewtypeStruct => "NewtypeStruct",
+            ElemType::NewtypeVariant => "NewtypeVariant"
         };
 
-        let node_type_sym = self.intern_string(table_name);
-        self.type_table.push((node, node_type_sym));
+        let elem_type_sym = self.intern_string(table_name);
+        self.type_table.push((elem, elem_type_sym));
         Result::Ok(())
     }
 
-    fn add_bool(&mut self, node: NodeId, value: bool) -> Result<Self::Ok> {
-        self.number_table.push((node, if value { 1 } else { 0 }));
+    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<Self::Ok> {
+        self.number_table.push((elem, if value { 1 } else { 0 }));
         Result::Ok(())
     }
 
-    fn add_i8(&mut self, node: NodeId, value: i8) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_i8(&mut self, elem: ElemId, value: i8) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_i16(&mut self, node: NodeId, value: i16) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_i16(&mut self, elem: ElemId, value: i16) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_i32(&mut self, node: NodeId, value: i32) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_i32(&mut self, elem: ElemId, value: i32) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_i64(&mut self, node: NodeId, value: i64) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_u8(&mut self, node: NodeId, value: u8) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_u8(&mut self, elem: ElemId, value: u8) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_u16(&mut self, node: NodeId, value: u16) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_u16(&mut self, elem: ElemId, value: u16) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_u32(&mut self, node: NodeId, value: u32) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_u32(&mut self, elem: ElemId, value: u32) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_u64(&mut self, node: NodeId, value: u64) -> Result<Self::Ok> {
-        self.number_table.push((node, value as isize));
+    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<Self::Ok> {
+        self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_f32(&mut self, _node: NodeId, _value: f32) -> Result<Self::Ok> {
+    fn add_f32(&mut self, _elem: ElemId, _value: f32) -> Result<Self::Ok> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
-    fn add_f64(&mut self, _node: NodeId, _value: f64) -> Result<Self::Ok> {
+    fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<Self::Ok> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
-    fn add_bytes(&mut self, _node: NodeId, _value: &[u8]) -> Result<Self::Ok> {
+    fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<Self::Ok> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
-    fn add_char(&mut self, node: NodeId, value: char) -> Result<Self::Ok> {
-        self.add_str(node, &value.to_string())
+    fn add_char(&mut self, elem: ElemId, value: char) -> Result<Self::Ok> {
+        self.add_str(elem, &value.to_string())
     }
 
-    fn add_str(&mut self, node: NodeId, value: &str) -> Result<()> {
+    fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()> {
         let value_sym = self.intern_string(value);
-        self.string_table.push((node, value_sym));
+        self.string_table.push((elem, value_sym));
         Result::Ok(())
     }
 
-    fn add_map(&mut self, node: NodeId, key: NodeId, value: NodeId) -> Result<()> {
-        self.map_table.push((node, key, value));
+    fn add_map_entry(&mut self, elem: ElemId, key: ElemId, value: ElemId) -> Result<()> {
+        self.map_table.push((elem, key, value));
         Result::Ok(())
     }
 
-    fn add_struct_type(&mut self, node: NodeId, struct_name: &str) -> Result<()> {
+    fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()> {
         let struct_name_sym = self.intern_string(struct_name);
-        self.struct_type_table.push((node, struct_name_sym));
+        self.struct_type_table.push((elem, struct_name_sym));
         Result::Ok(())
     }
 
-    fn add_struct(&mut self, node: NodeId, key: &str, value: NodeId) -> Result<()> {
+    fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()> {
         let key_sym = self.intern_string(key);
-        self.struct_table.push((node, key_sym, value));
+        self.struct_table.push((elem, key_sym, value));
         Result::Ok(())
     }
 
-    fn add_seq(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<()> {
-        self.seq_table.push((node, pos, value));
+    fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()> {
+        self.seq_table.push((elem, pos, value));
         Result::Ok(())
     }
 
-    fn add_variant_type(&mut self, node: NodeId, type_name: &str, variant_name: &str) -> Result<()> {
+    fn add_variant_type(&mut self, elem: ElemId, type_name: &str, variant_name: &str) -> Result<()> {
         let type_name_sym = self.intern_string(type_name);
         let variant_name_sym = self.intern_string(variant_name);
-        self.variant_type_table.push((node, type_name_sym, variant_name_sym));
+        self.variant_type_table.push((elem, type_name_sym, variant_name_sym));
         Result::Ok(())
     }
 
-    fn add_tuple(&mut self, node: NodeId, pos: usize, value: NodeId) -> Result<()> {
-        self.tuple_table.push((node, pos, value));
+    fn add_tuple_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()> {
+        self.tuple_table.push((elem, pos, value));
         Result::Ok(())
     }
 }
