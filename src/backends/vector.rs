@@ -184,8 +184,6 @@ impl Backend {
 }
 
 impl<'a> DatalogExtractorBackend for &'a mut Backend {
-    type Ok = ();
-
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         let type_name: &str;
 
@@ -253,17 +251,17 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
         Result::Ok(())
     }
 
-    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<Self::Ok> {
+    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()> {
         self.number_table.push((elem, if value { 1 } else { 0 }));
         Result::Ok(())
     }
 
-    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<Self::Ok> {
+    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()> {
         self.number_table.push((elem, value as isize));
         Result::Ok(())
     }
 
-    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<Self::Ok> {
+    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {
         self.number_table.push((elem, value as isize));
         Result::Ok(())
     }

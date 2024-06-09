@@ -251,21 +251,19 @@ impl Backend {
 }
 
 impl<'a> DatalogExtractorBackend for &'a mut Backend {
-    type Ok = ();
-
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         (&mut self.vector_backend).add_elem(elem, elem_type)
     }
 
-    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<Self::Ok> {
+    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()> {
         (&mut self.vector_backend).add_bool(elem, value)
     }
 
-    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<Self::Ok> {
+    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()> {
         (&mut self.vector_backend).add_i64(elem, value)
     }
 
-    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<Self::Ok> {
+    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {
         (&mut self.vector_backend).add_u64(elem, value)
     }
 

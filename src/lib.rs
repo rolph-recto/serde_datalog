@@ -140,32 +140,30 @@ pub enum ElemType {
 /// by [DatalogExtractor]. These facts can be represented in whatever format
 /// the backend chooses, e.g. a SQLite database, a set of vectors, etc.
 pub trait DatalogExtractorBackend {
-    type Ok;
-
     /// Materialize fact that element with ID `elem` has element type `elem_type`.
-    fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<Self::Ok>;
+    fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()>;
 
     /// Materialize fact that element with ID `elem` is a boolean with value `value`.
-    fn add_bool(&mut self, _elem: ElemId, _value: bool) -> Result<Self::Ok> {
+    fn add_bool(&mut self, _elem: ElemId, _value: bool) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
     /// Materialize fact that element with ID `elem` is an i8 with value `value`.
     /// 
     /// The default implementation forwards to [add_i64][Self::add_i64].
-    fn add_i8(&mut self, elem: ElemId, value: i8) -> Result<Self::Ok> {
+    fn add_i8(&mut self, elem: ElemId, value: i8) -> Result<()> {
         self.add_i64(elem, value as i64)
     }
 
     /// Materialize fact that element with ID `elem` is an i16 with value `value`.
     /// 
     /// The default implementation forwards to [add_i64][Self::add_i64].
-    fn add_i16(&mut self, elem: ElemId, value: i16) -> Result<Self::Ok> {
+    fn add_i16(&mut self, elem: ElemId, value: i16) -> Result<()> {
         self.add_i64(elem, value as i64)
     }
 
     /// Materialize fact that element with ID `elem` is an i32 with value `value`.
-    fn add_i32(&mut self, elem: ElemId, value: i32) -> Result<Self::Ok> {
+    fn add_i32(&mut self, elem: ElemId, value: i32) -> Result<()> {
         self.add_i64(elem, value as i64)
     }
 
@@ -173,24 +171,26 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<Self::Ok>;
+    fn add_i64(&mut self, _elem: ElemId, _value: i64) -> Result<()> {
+        Result::Err(DatalogExtractionError::UnextractableData)
+    }
 
     /// Materialize fact that element with ID `elem` is an u8 with value `value`.
     /// 
     /// The default implementation forwards to [add_u64][Self::add_u64].
-    fn add_u8(&mut self, elem: ElemId, value: u8) -> Result<Self::Ok> {
+    fn add_u8(&mut self, elem: ElemId, value: u8) -> Result<()> {
         self.add_u64(elem, value as u64)
     }
 
     /// Materialize fact that element with ID `elem` is an u16 with value `value`.
     /// 
     /// The default implementation forwards to [add_u64][Self::add_u64].
-    fn add_u16(&mut self, elem: ElemId, value: u16) -> Result<Self::Ok> {
+    fn add_u16(&mut self, elem: ElemId, value: u16) -> Result<()> {
         self.add_u64(elem, value as u64)
     }
 
     /// Materialize fact that element with ID `elem` is an u32 with value `value`.
-    fn add_u32(&mut self, elem: ElemId, value: u32) -> Result<Self::Ok> {
+    fn add_u32(&mut self, elem: ElemId, value: u32) -> Result<()> {
         self.add_u64(elem, value as u64)
     }
 
@@ -198,12 +198,12 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_u64(&mut self, _elem: ElemId, _value: u64) -> Result<Self::Ok> {
+    fn add_u64(&mut self, _elem: ElemId, _value: u64) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
     /// Materialize fact that element with ID `elem` is a f32 with value `value`.
-    fn add_f32(&mut self, elem: ElemId, value: f32) -> Result<Self::Ok> {
+    fn add_f32(&mut self, elem: ElemId, value: f32) -> Result<()> {
         self.add_f64(elem, value as f64)
     }
 
@@ -211,19 +211,19 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<Self::Ok> {
+    fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
     /// Materialize fact that element with ID `elem` is a char with value `value`.
     /// 
     /// The default implementation forwards to [add_str][Self::add_str].
-    fn add_char(&mut self, elem: ElemId, value: char) -> Result<Self::Ok> {
+    fn add_char(&mut self, elem: ElemId, value: char) -> Result<()> {
         self.add_str(elem, &value.to_string())
     }
 
     /// Materialize fact that element with ID `elem` is a str with value `value`.
-    fn add_str(&mut self, _elem: ElemId, _value: &str) -> Result<Self::Ok> {
+    fn add_str(&mut self, _elem: ElemId, _value: &str) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -231,7 +231,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<Self::Ok> {
+    fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -240,7 +240,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_map_entry(&mut self, _elem: ElemId, _key: ElemId, _value: ElemId) -> Result<Self::Ok> {
+    fn add_map_entry(&mut self, _elem: ElemId, _key: ElemId, _value: ElemId) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -251,7 +251,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_struct_type(&mut self, _elem: ElemId, _struct_name: &str) -> Result<Self::Ok> {
+    fn add_struct_type(&mut self, _elem: ElemId, _struct_name: &str) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -262,7 +262,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_struct_entry(&mut self, _elem: ElemId, _key: &str, _value: ElemId) -> Result<Self::Ok> {
+    fn add_struct_entry(&mut self, _elem: ElemId, _key: &str, _value: ElemId) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -271,7 +271,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_seq_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<Self::Ok> {
+    fn add_seq_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -283,7 +283,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_variant_type(&mut self, _elem: ElemId, _type_name: &str, _variant_name: &str) -> Result<Self::Ok> {
+    fn add_variant_type(&mut self, _elem: ElemId, _type_name: &str, _variant_name: &str) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
@@ -295,7 +295,7 @@ pub trait DatalogExtractorBackend {
     /// 
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
-    fn add_tuple_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<Self::Ok> {
+    fn add_tuple_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<()> {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 }
@@ -308,11 +308,11 @@ pub struct DatalogExtractor<'a> {
     cur_elem_id: ElemId,
     elem_stack: Vec<ElemId>,
     parent_stack: Vec<(ElemId, usize)>,
-    backend: Box<dyn DatalogExtractorBackend<Ok = ()> + 'a>,
+    backend: Box<dyn DatalogExtractorBackend + 'a>,
 }
 
 impl<'a> DatalogExtractor<'a> {
-    pub fn new<T: 'a + DatalogExtractorBackend<Ok = ()>>(backend: T) -> Self {
+    pub fn new<T: 'a + DatalogExtractorBackend>(backend: T) -> Self {
         DatalogExtractor {
             backend: Box::new(backend),
             cur_elem_id: ElemId(1),
