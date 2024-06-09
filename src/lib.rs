@@ -45,13 +45,13 @@
 //! implementation of [DatalogExtractorBackend]:
 //! 
 //! ```ignore
-//! backend.add_elem(ElemId(1), elemType::TupleVariant)
+//! backend.add_elem(ElemId(1), ElemType::TupleVariant)
 //! backend.add_variant_type(ElemId(1), "Foo", "A")
 //! backend.add_tuple(ElemId(1), 0, ElemId(2))
-//! backend.add_elem(ElemId(2), elemType::TupleVariant)
+//! backend.add_elem(ElemId(2), ElemType::TupleVariant)
 //! backend.add_variant_type(ElemId(1), "Foo", "B")
 //! backend.add_tuple(ElemId(2), 0, ElemId(3))
-//! backend.add_elem(ElemId(3), elemType::I64)
+//! backend.add_elem(ElemId(3), ElemType::I64)
 //! backend.add_i64(ElemId(3), 10)
 //! ```
 
