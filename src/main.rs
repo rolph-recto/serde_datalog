@@ -16,18 +16,12 @@ use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
 trait InputFormat<'a> {
     fn name(&self) -> String;
     fn file_extensions(&self) -> Vec<String>;
-    fn set_content<'b>(&'b mut self, contents: &'a str);
-    fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b>;
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b>;
 }
 
+#[derive(Default)]
 struct InputFormatJSON<'a> {
-    contents: Option<serde_json::de::Deserializer<StrRead<'a>>>
-}
-
-impl<'a> Default for InputFormatJSON<'a> {
-    fn default() -> Self {
-        Self { contents: None }
-    }
+    deserializer: Option<serde_json::de::Deserializer<StrRead<'a>>>
 }
 
 impl<'a> InputFormat<'a> for InputFormatJSON<'a> {
@@ -39,13 +33,9 @@ impl<'a> InputFormat<'a> for InputFormatJSON<'a> {
         vec!["json".to_string()]
     }
 
-    fn set_content<'b>(&'b mut self, contents: &'a str) {
-        let deserializer = serde_json::Deserializer::from_str(contents);
-        self.contents = Some(deserializer);
-    }
-
-    fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-        Box::new(<dyn ErasedDeserializer<'a>>::erase(self.contents.as_mut().unwrap()))
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
+        self.deserializer = Some(serde_json::Deserializer::from_str(contents));
+        Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
     }
 }
 
@@ -99,6 +89,7 @@ fn main() {
         match (&format_auto, &args.format) {
             (None, None) => None,
 
+            // format specified with -f overrides format from file extension
             (_, Some(name)) => {
                 formats.iter_mut()
                 .find(|fmt| fmt.name() == *name)
@@ -116,8 +107,7 @@ fn main() {
         };
 
     if let Some(format) = format_opt {
-        format.set_content(&input);
-        let mut deserializer = format.deserializer();
+        let mut deserializer = format.create_deserializer(&input);
         let mut souffle_sqlite = souffle_sqlite::Backend::default();
 
         let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
