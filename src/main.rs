@@ -1,4 +1,8 @@
-use clap::Parser;
+//! This crate provides a command-line utility `serdedl` for Serde Datalog that
+//! converts from a variety of common data formats into an input EDB for a
+//! Datalog program.
+
+use clap::{Parser, ValueEnum, CommandFactory};
 use std::{
     io::{self, Read},
     fs,
@@ -6,6 +10,9 @@ use std::{
 };
 
 use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
+
+#[derive(Debug, Clone, ValueEnum)]
+enum InputFormat { JSON, TOML, RON, YAML, SEXPR }
 
 #[derive(Parser, Debug)]
 #[command(
@@ -20,6 +27,9 @@ struct Args {
     )]
     filename: Option<String>,
 
+    #[arg(short = 'f', long = "format", help = "Format of input file")]
+    format: Option<InputFormat>,
+
     #[arg(short = 'o', long = "output", help = "File name of output SQLite database")]
     output: Option<String>,
 }
@@ -28,34 +38,70 @@ fn main() {
     let args = Args::parse();
 
     let mut input: String = String::new();
-    match args.filename {
+    let mut autoformat: Option<InputFormat> = None;
+    match &args.filename {
         Some(filename) => {
-            input = fs::read_to_string(filename).unwrap()
+            let path = Path::new(&filename);
 
+            if let Some(ext) = path.extension() {
+                if ext == "json" {
+                    autoformat = Some(InputFormat::JSON);
+
+                } else if ext == "toml"{
+                    autoformat = Some(InputFormat::TOML);
+
+                } else if ext == "ron"{
+                    autoformat = Some(InputFormat::RON);
+
+                } else if ext == "yaml" || ext == "yml" {
+                    autoformat = Some(InputFormat::YAML);
+                }
+            }
+
+            input = fs::read_to_string(path).unwrap()
         },
         None => {
             io::stdin().read_to_string(&mut input).unwrap();
         }
     };
 
-    let mut deserializer = serde_json::Deserializer::from_str(&input);
-    let mut souffle_sqlite = souffle_sqlite::Backend::default();
+    let format_opt: Option<InputFormat> = 
+        match (&autoformat, &args.format) {
+            (None, None) => None,
+            (_, None) => autoformat.clone(),
+            (_, Some(_)) => args.format.clone()
+        };
 
-    let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
-    serde_transcode::transcode(&mut deserializer, &mut extractor).unwrap();
-    drop(extractor);
+    if let Some(format) = format_opt {
+        let mut deserializer =
+            match format {
+                InputFormat::JSON | InputFormat::TOML | InputFormat::RON |
+                InputFormat::YAML | InputFormat::SEXPR => {
+                    serde_json::Deserializer::from_str(&input)
+                }
+            };
 
-    match args.output {
-        Some(output_file) => {
-            let outpath = Path::new(&output_file);
-            if outpath.is_file() {
-                fs::remove_file(&output_file).unwrap();
+        let mut souffle_sqlite = souffle_sqlite::Backend::default();
+
+        let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
+        serde_transcode::transcode(&mut deserializer, &mut extractor).unwrap();
+        drop(extractor);
+
+        match args.output {
+            Some(output_file) => {
+                let outpath = Path::new(&output_file);
+                if outpath.is_file() {
+                    fs::remove_file(&output_file).unwrap();
+                }
+                souffle_sqlite.dump_to_db(&output_file).unwrap();
+            },
+
+            None => {
+                souffle_sqlite.dump();
             }
-            souffle_sqlite.dump_to_db(&output_file).unwrap();
-        },
-
-        None => {
-            souffle_sqlite.dump();
         }
+
+    } else {
+        println!("Unknown format for input");
     }
 }

@@ -58,6 +58,14 @@ backend.add_i64(elemId(3), 10)
 
 ## Backends
 
-Currently, Serde Datalog can generate a [SQLite](https://www.sqlite.org/)
-database of facts in the format expected by [Souffle](https://souffle-lang.github.io/),
-a high-performance implementation of Datalog.
+Serde Datalog comes with the following built-in backends:
+
+- a backend that stores facts as tuples in vectors
+
+- a backend that stores fact as tables in a [SQLite](https://www.sqlite.org/) database
+
+## To Do
+- [ ] move booleans away from number table
+- [ ] add more tests
+- [ ] more input data formats (YAML, TOML, RON)
+- [ ] serdedl: allow multiple input files
