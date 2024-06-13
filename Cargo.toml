@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.13", features = ["derive"] }
+erased-serde = "0.4.2"
 rusqlite = "0.30.0"
 serde = { version = "1.0.194", features = ["derive"] }
 serde-transcode = "1.1.1"

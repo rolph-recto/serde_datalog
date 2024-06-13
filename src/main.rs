@@ -2,7 +2,9 @@
 //! converts from a variety of common data formats into an input EDB for a
 //! Datalog program.
 
-use clap::{Parser, ValueEnum, CommandFactory};
+use erased_serde::Deserializer as ErasedDeserializer;
+use clap::{Parser, ValueEnum};
+use serde_json::de::StrRead;
 use std::{
     io::{self, Read},
     fs,
@@ -11,8 +13,41 @@ use std::{
 
 use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
 
-#[derive(Debug, Clone, ValueEnum)]
-enum InputFormat { JSON, TOML, RON, YAML, SEXPR }
+trait InputFormat<'a> {
+    fn name(&self) -> String;
+    fn file_extensions(&self) -> Vec<String>;
+    fn set_content<'b>(&'b mut self, contents: &'a str);
+    fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b>;
+}
+
+struct InputFormatJSON<'a> {
+    contents: Option<serde_json::de::Deserializer<StrRead<'a>>>
+}
+
+impl<'a> Default for InputFormatJSON<'a> {
+    fn default() -> Self {
+        Self { contents: None }
+    }
+}
+
+impl<'a> InputFormat<'a> for InputFormatJSON<'a> {
+    fn name(&self) -> String {
+        "json".to_string()
+    }
+
+    fn file_extensions(&self) -> Vec<String> {
+        vec!["json".to_string()]
+    }
+
+    fn set_content<'b>(&'b mut self, contents: &'a str) {
+        let deserializer = serde_json::Deserializer::from_str(contents);
+        self.contents = Some(deserializer);
+    }
+
+    fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
+        Box::new(<dyn ErasedDeserializer<'a>>::erase(self.contents.as_mut().unwrap()))
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -28,7 +63,7 @@ struct Args {
     filename: Option<String>,
 
     #[arg(short = 'f', long = "format", help = "Format of input file")]
-    format: Option<InputFormat>,
+    format: Option<String>,
 
     #[arg(short = 'o', long = "output", help = "File name of output SQLite database")]
     output: Option<String>,
@@ -37,54 +72,56 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let mut input: String = String::new();
-    let mut autoformat: Option<InputFormat> = None;
-    match &args.filename {
-        Some(filename) => {
-            let path = Path::new(&filename);
+    let mut formats = vec![
+        InputFormatJSON::default()
+    ];
 
-            if let Some(ext) = path.extension() {
-                if ext == "json" {
-                    autoformat = Some(InputFormat::JSON);
+    let (format_auto, input): (Option<String>, String) =
+        match &args.filename {
+            Some(filename) => {
+                let path = Path::new(&filename);
+                let ext_opt =
+                    path.extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|s| s.to_string());
 
-                } else if ext == "toml"{
-                    autoformat = Some(InputFormat::TOML);
+                (ext_opt, fs::read_to_string(path).unwrap())
+            },
 
-                } else if ext == "ron"{
-                    autoformat = Some(InputFormat::RON);
-
-                } else if ext == "yaml" || ext == "yml" {
-                    autoformat = Some(InputFormat::YAML);
-                }
+            None => {
+                let mut buf = String::new();
+                io::stdin().read_to_string(&mut buf).unwrap();
+                (None, buf)
             }
+        };
 
-            input = fs::read_to_string(path).unwrap()
-        },
-        None => {
-            io::stdin().read_to_string(&mut input).unwrap();
-        }
-    };
-
-    let format_opt: Option<InputFormat> = 
-        match (&autoformat, &args.format) {
+    let format_opt: Option<&mut dyn InputFormat<'_>> =
+        match (&format_auto, &args.format) {
             (None, None) => None,
-            (_, None) => autoformat.clone(),
-            (_, Some(_)) => args.format.clone()
+
+            (_, Some(name)) => {
+                formats.iter_mut()
+                .find(|fmt| fmt.name() == *name)
+                .map(|fmt| fmt as &mut dyn InputFormat<'_>)
+            },
+
+            (Some(ext), None) => {
+                formats.iter_mut()
+                .find(|fmt| {
+                    fmt.file_extensions().iter()
+                    .any(|fmt_ext| fmt_ext == ext)
+                })
+                .map(|fmt| fmt as &mut dyn InputFormat<'_>)
+            },
         };
 
     if let Some(format) = format_opt {
-        let mut deserializer =
-            match format {
-                InputFormat::JSON | InputFormat::TOML | InputFormat::RON |
-                InputFormat::YAML | InputFormat::SEXPR => {
-                    serde_json::Deserializer::from_str(&input)
-                }
-            };
-
+        format.set_content(&input);
+        let mut deserializer = format.deserializer();
         let mut souffle_sqlite = souffle_sqlite::Backend::default();
 
         let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
-        serde_transcode::transcode(&mut deserializer, &mut extractor).unwrap();
+        serde_transcode::transcode(deserializer.as_mut(), &mut extractor).unwrap();
         drop(extractor);
 
         match args.output {
@@ -102,6 +139,9 @@ fn main() {
         }
 
     } else {
-        println!("Unknown format for input");
+        println!("Unknown format for input. Accepted input formats:");
+        for fmt in formats.iter() {
+            println!("- {}", fmt.name());
+        }
     }
 }
