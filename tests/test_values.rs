@@ -1,13 +1,85 @@
+use std::ops::Add;
+
 use serde::Serialize;
 use serde_datalog::{DatalogExtractor, backend};
 use serde_json::Value;
 
-fn get_backend(value: Value) -> backend::vector::Backend {
+struct ValueCount {
+    bool: usize,
+    number: usize,
+    string: usize,
+    array: usize,
+    object: usize,
+}
+
+impl std::ops::Add<ValueCount> for ValueCount {
+    type Output = ValueCount;
+
+    fn add(self, rhs: ValueCount) -> Self::Output {
+        ValueCount {
+            bool: self.bool + rhs.bool,
+            number: self.number + rhs.number,
+            string: self.string + rhs.string,
+            array: self.array + rhs.array,
+            object: self.object + rhs.object,
+        }
+    }
+}
+
+impl ValueCount {
+    fn new(bool: usize, number: usize, string: usize, array: usize, object: usize) -> Self {
+        Self { bool, number, string, array, object }
+    }
+
+    fn get(value: &Value) -> Self {
+        match value {
+            Value::Null => ValueCount::new(0, 0, 0, 0, 0),
+
+            Value::Bool(_) => ValueCount::new(1, 0, 0, 0, 0),
+
+            Value::Number(_) => ValueCount::new(0, 1, 0, 0, 0),
+
+            Value::String(_) => ValueCount::new(0, 0, 1, 0, 0),
+
+            Value::Array(arr) => {
+                arr.iter().fold(ValueCount::new(0, 0, 0, 1, 0), |acc, v| {
+                    let c = ValueCount::get(v);
+                    acc + c
+                })
+            }
+
+            Value::Object(map) => {
+                map.iter().fold(ValueCount::new(0, 0, 0, 0, 1), |acc, (_, v)| {
+                    let c = ValueCount::get(v);
+
+                    // add 1 string for the key
+                    let mut res = acc + c;
+                    res.string += 1;
+                    res
+                })
+            }
+        }
+    }
+
+    fn total(&self) -> usize {
+        self.bool + self.number + self.string + self.array + self.object
+    }
+}
+
+fn get_backend(value: &Value) -> backend::vector::Backend {
     let mut backend = backend::vector::Backend::default();
     let mut extractor = DatalogExtractor::new(&mut backend);
     let res = value.serialize(&mut extractor);
     drop(extractor);
     assert!(res.is_ok());
+
+    let c = ValueCount::get(&value);
+
+    assert!(backend.map_table.len() == c.object);
+    assert!(backend.number_table.len() == c.number + c.bool);
+    assert!(backend.string_table.len() == c.string);
+    assert!(backend.type_table.len() == c.total());
+
     backend
 }
 
@@ -20,12 +92,7 @@ fn run_value1() {
             ].into_iter()
         ).into();
 
-    let backend = get_backend(value);
-
-    assert!(backend.map_table.len() == 1);
-    assert!(backend.number_table.len() == 1);
-    assert!(backend.string_table.len() == 1);
-    assert!(backend.type_table.len() == 3);
+    let backend = get_backend(&value);
 
     let map_key = backend.map_table.first().unwrap().1;
     let map_value = backend.map_table.first().unwrap().2;
@@ -42,7 +109,7 @@ fn run_value2() {
             Value::String("b".to_string()),
         ]);
 
-    let backend = get_backend(value);
+    let backend = get_backend(&value);
 
     assert!(backend.seq_table.len() == 2);
     assert!(backend.string_table.len() == 2);
