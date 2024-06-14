@@ -333,7 +333,6 @@ impl<'a> DatalogExtractor<'a> {
         value.serialize(&mut *self)?;
         let child_id = self.elem_stack.pop().unwrap();
         let (parent_id , pos) = self.parent_stack.last_mut().unwrap();
-        *pos += 1;
 
         match elem_type {
             ElemType::Seq => {
@@ -345,7 +344,10 @@ impl<'a> DatalogExtractor<'a> {
             }
 
             _ => unreachable!()
-        }
+        }?;
+
+        *pos += 1;
+        Result::Ok(())
     }
 
     fn end_parent(&mut self) -> Result<()> {

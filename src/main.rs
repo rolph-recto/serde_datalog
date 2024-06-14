@@ -3,7 +3,7 @@
 //! Datalog program.
 
 use erased_serde::Deserializer as ErasedDeserializer;
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use serde_json::de::StrRead;
 use std::{
     io::{self, Read},
@@ -16,7 +16,8 @@ use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
 trait InputFormat<'a> {
     fn name(&self) -> String;
     fn file_extensions(&self) -> Vec<String>;
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b;
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b>
+        where 'a: 'b;
 }
 
 #[derive(Default)]
@@ -132,6 +133,8 @@ fn main() {
             None => None,
         };
 
+    println!("format_auto: {:?}", format_auto);
+
     let format_opt: Option<&mut dyn InputFormat<'_>> =
         match (&format_auto, &args.format) {
             (None, None) => None,
@@ -181,7 +184,4 @@ fn main() {
             println!("- {}", fmt.name());
         }
     }
-
-    drop(formats);
-    drop(input);
 }
