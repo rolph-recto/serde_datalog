@@ -133,8 +133,6 @@ fn main() {
             None => None,
         };
 
-    println!("format_auto: {:?}", format_auto);
-
     let format_opt: Option<&mut dyn InputFormat<'_>> =
         match (&format_auto, &args.format) {
             (None, None) => None,

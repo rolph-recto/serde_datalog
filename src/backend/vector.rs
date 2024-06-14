@@ -14,6 +14,9 @@ pub struct Backend {
     pub type_table: Vec<(ElemId, SymbolId)>,
 
     // (elem, value)
+    pub bool_table: Vec<(ElemId, bool)>,
+
+    // (elem, value)
     pub number_table: Vec<(ElemId, isize)>,
 
     // (elem, symbol)
@@ -44,6 +47,7 @@ impl Default for Backend {
             cur_symbol_id: SymbolId(1),
             symbol_table: Default::default(),
             type_table: Default::default(),
+            bool_table: Default::default(),
             number_table: Default::default(),
             string_table: Default::default(),
             map_table: Default::default(),
@@ -83,9 +87,9 @@ impl Backend {
         }
 
         if !self.type_table.is_empty() {
-            println!("{:^33}", "elem Table");
+            println!("{:^33}", "Type Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "elem Id", "elem Type");
+            println!("{:<15} | {:<15}", "Elem Id", "Elem Type");
             println!("---------------------------------");
             for (elem, elem_type) in self.type_table.iter() {
                 println!("{:<15} | {:<15?}", elem.0, elem_type.0);
@@ -93,13 +97,24 @@ impl Backend {
             println!();
         }
 
+        if !self.bool_table.is_empty() {
+            println!("{:^33}", "Bool Table");
+            println!("---------------------------------");
+            println!("{:<15} | {:<15}", "Elem Id", "Value");
+            println!("---------------------------------");
+            for (elem, value) in self.bool_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, value);
+            }
+            println!();
+        }
+
         if !self.number_table.is_empty() {
             println!("{:^33}", "Number Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "elem Id", "Number");
+            println!("{:<15} | {:<15}", "Elem Id", "Value");
             println!("---------------------------------");
-            for (elem, number) in self.number_table.iter() {
-                println!("{:<15} | {:<15?}", elem.0, number);
+            for (elem, value) in self.number_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, value);
             }
             println!();
         }
@@ -107,10 +122,10 @@ impl Backend {
         if !self.string_table.is_empty() {
             println!("{:^33}", "String Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "elem Id", "String");
+            println!("{:<15} | {:<15}", "Elem Id", "Value");
             println!("---------------------------------");
-            for (elem, str) in self.string_table.iter() {
-                println!("{:<15} | {:<15?}", elem.0, str.0);
+            for (elem, value) in self.string_table.iter() {
+                println!("{:<15} | {:<15?}", elem.0, value.0);
             }
             println!();
         }
@@ -118,7 +133,7 @@ impl Backend {
         if !self.map_table.is_empty() {
             println!("{:^51}", "Map Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Key", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Key", "Value");
             println!("---------------------------------------------------");
             for (elem, key, val) in self.map_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", elem.0, key.0, val.0);
@@ -129,7 +144,7 @@ impl Backend {
         if !self.struct_type_table.is_empty() {
             println!("{:^33}", "Struct Type Table");
             println!("---------------------------------");
-            println!("{:<15} | {:<15}", "elem Id", "Struct Type");
+            println!("{:<15} | {:<15}", "Elem Id", "Struct Type");
             println!("---------------------------------");
             for (elem, struct_type) in self.string_table.iter() {
                 println!("{:<15} | {:<15?}", elem.0, struct_type.0);
@@ -140,7 +155,7 @@ impl Backend {
         if !self.struct_table.is_empty() {
             println!("{:^51}", "Struct Field Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Field", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Field", "Value");
             println!("---------------------------------------------------");
             for (elem, field, val) in self.struct_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", elem.0, field.0, val.0);
@@ -151,7 +166,7 @@ impl Backend {
         if !self.seq_table.is_empty() {
             println!("{:^51}", "Seq Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Index", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Index", "Value");
             println!("---------------------------------------------------");
             for (elem, index, val) in self.seq_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", elem.0, index, val.0);
@@ -162,7 +177,7 @@ impl Backend {
         if !self.variant_type_table.is_empty() {
             println!("{:^51}", "Variant Type Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Enum Type", "Variant Name");
+            println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Enum Type", "Variant Name");
             println!("---------------------------------------------------");
             for (elem, enum_type, variant_name) in self.variant_type_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", elem.0, enum_type.0, variant_name.0);
@@ -173,7 +188,7 @@ impl Backend {
         if !self.tuple_table.is_empty() {
             println!("{:^51}", "Tuple Table");
             println!("---------------------------------------------------");
-            println!("{:<15} | {:<15} | {:<15}", "elem Id", "Index", "Value");
+            println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Index", "Value");
             println!("---------------------------------------------------");
             for (elem, index, val) in self.tuple_table.iter() {
                 println!("{:<15} | {:<15?} | {:<15?}", elem.0, index, val.0);
@@ -252,7 +267,7 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
     }
 
     fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()> {
-        self.number_table.push((elem, if value { 1 } else { 0 }));
+        self.bool_table.push((elem, value));
         Result::Ok(())
     }
 

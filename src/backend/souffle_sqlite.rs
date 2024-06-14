@@ -49,6 +49,16 @@ impl Backend {
             FROM _type INNER JOIN __SymbolTable
             ON _type.type = __SymbolTable.id;
 
+            CREATE TABLE _bool (
+                id INTEGER NOT NULL,
+                value INTEGER NOT NULL,
+                PRIMARY KEY (id),
+                FOREIGN KEY(id) REFERENCES _type(id)
+            );
+
+            CREATE VIEW bool AS
+            SELECT id, value FROM _bool;
+
             CREATE TABLE _number (
                 id INTEGER NOT NULL,
                 value INTEGER NOT NULL,
@@ -172,6 +182,15 @@ impl Backend {
 
         for (id, sym) in self.vector_backend.type_table.iter() {
             insert_type_table.execute((id.0, sym.0))?;
+        }
+
+        let mut insert_bool_table =
+            conn.prepare(
+                "INSERT INTO _bool (id, value) VALUES (?1, ?2);",
+            )?;
+
+        for (id, value) in self.vector_backend.bool_table.iter() {
+            insert_bool_table.execute((id.0, if *value { 1 } else { 0 }))?;
         }
 
         let mut insert_number_table =

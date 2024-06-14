@@ -66,6 +66,6 @@ Serde Datalog comes with the following built-in backends:
 
 ## To Do
 - [ ] move booleans away from number table
-- [ ] add more tests
-- [ ] more input data formats (YAML, TOML, RON)
+- [ ] generate arbitrary JSON for tests
+- [ ] more input data formats (YAML)
 - [ ] serdedl: allow multiple input files
