@@ -1,6 +1,6 @@
 use std::fs;
 use serde::Serialize;
-use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
+use serde_datalog::{DatalogExtractor, backend::souffle_sqlite};
 
 #[test]
 fn run_examples() {
