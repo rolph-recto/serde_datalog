@@ -1,15 +1,21 @@
-use std::ops::Add;
+use std::ops::ControlFlow;
 
+use arbitrary::{Unstructured, Arbitrary};
+use arbitrary_json::ArbitraryValue;
+use rand::RngCore;
 use serde::Serialize;
-use serde_datalog::{DatalogExtractor, backend};
+use serde_datalog::{DatalogExtractor, backend, DatalogExtractionError};
 use serde_json::Value;
 
 struct ValueCount {
+    null: usize,
     bool: usize,
     number: usize,
     string: usize,
     array: usize,
     object: usize,
+    array_elements: usize,
+    object_fields: usize,
 }
 
 impl std::ops::Add<ValueCount> for ValueCount {
@@ -17,44 +23,50 @@ impl std::ops::Add<ValueCount> for ValueCount {
 
     fn add(self, rhs: ValueCount) -> Self::Output {
         ValueCount {
+            null: self.null + rhs.null,
             bool: self.bool + rhs.bool,
             number: self.number + rhs.number,
             string: self.string + rhs.string,
             array: self.array + rhs.array,
             object: self.object + rhs.object,
+            array_elements: self.array_elements + rhs.array_elements,
+            object_fields: self.object_fields + rhs.object_fields,
         }
     }
 }
 
 impl ValueCount {
-    fn new(bool: usize, number: usize, string: usize, array: usize, object: usize) -> Self {
-        Self { bool, number, string, array, object }
+    fn new(null: usize, bool: usize, number: usize, string: usize, array: usize, array_elements: usize, object: usize, object_fields: usize) -> Self {
+        Self { null, bool, number, string, array, array_elements, object, object_fields }
     }
 
     fn get(value: &Value) -> Self {
         match value {
-            Value::Null => ValueCount::new(0, 0, 0, 0, 0),
+            Value::Null => ValueCount::new(1, 0, 0, 0, 0, 0, 0, 0),
 
-            Value::Bool(_) => ValueCount::new(1, 0, 0, 0, 0),
+            Value::Bool(_) => ValueCount::new(0, 1, 0, 0, 0, 0, 0, 0),
 
-            Value::Number(_) => ValueCount::new(0, 1, 0, 0, 0),
+            Value::Number(_) => ValueCount::new(0, 0, 1, 0, 0, 0, 0, 0),
 
-            Value::String(_) => ValueCount::new(0, 0, 1, 0, 0),
+            Value::String(_) => ValueCount::new(0, 0, 0, 1, 0, 0, 0, 0),
 
             Value::Array(arr) => {
-                arr.iter().fold(ValueCount::new(0, 0, 0, 1, 0), |acc, v| {
+                arr.iter().fold(ValueCount::new(0, 0, 0, 0, 1, 0, 0, 0), |acc, v| {
                     let c = ValueCount::get(v);
-                    acc + c
+                    let mut res = acc + c;
+                    res.array_elements += 1;
+                    res
                 })
             }
 
             Value::Object(map) => {
-                map.iter().fold(ValueCount::new(0, 0, 0, 0, 1), |acc, (_, v)| {
+                map.iter().fold(ValueCount::new(0, 0, 0, 0, 0, 0, 1, 0), |acc, (_, v)| {
                     let c = ValueCount::get(v);
 
                     // add 1 string for the key
                     let mut res = acc + c;
                     res.string += 1;
+                    res.object_fields += 1;
                     res
                 })
             }
@@ -62,25 +74,37 @@ impl ValueCount {
     }
 
     fn total(&self) -> usize {
-        self.bool + self.number + self.string + self.array + self.object
+        self.null + self.bool + self.number + self.string + self.array + self.object
     }
 }
 
-fn get_backend(value: &Value) -> backend::vector::Backend {
+fn extract(value: &Value) -> Option<backend::vector::Backend> {
     let mut backend = backend::vector::Backend::default();
     let mut extractor = DatalogExtractor::new(&mut backend);
     let res = value.serialize(&mut extractor);
     drop(extractor);
-    assert!(res.is_ok());
 
-    let c = ValueCount::get(&value);
+    return match res {
+        Ok(_) => {
+            let c = ValueCount::get(&value);
+            assert!(backend.map_table.len() == c.object_fields);
+            assert!(backend.seq_table.len() == c.array_elements);
+            assert!(backend.bool_table.len() == c.bool);
+            assert!(backend.number_table.len() == c.number);
+            assert!(backend.string_table.len() == c.string);
+            assert!(backend.type_table.len() == c.total());
+            Some(backend)
+        }
 
-    assert!(backend.map_table.len() == c.object);
-    assert!(backend.number_table.len() == c.number + c.bool);
-    assert!(backend.string_table.len() == c.string);
-    assert!(backend.type_table.len() == c.total());
+        Err(DatalogExtractionError::UnextractableData) => {
+            None
+        }
 
-    backend
+        Err(DatalogExtractionError::Custom(msg)) => {
+            assert!(false, "{}", msg);
+            None
+        }
+    };
 }
 
 #[test]
@@ -92,7 +116,7 @@ fn run_value1() {
             ].into_iter()
         ).into();
 
-    let backend = get_backend(&value);
+    let backend = extract(&value).unwrap();
 
     let map_key = backend.map_table.first().unwrap().1;
     let map_value = backend.map_table.first().unwrap().2;
@@ -109,11 +133,7 @@ fn run_value2() {
             Value::String("b".to_string()),
         ]);
 
-    let backend = get_backend(&value);
-
-    assert!(backend.seq_table.len() == 2);
-    assert!(backend.string_table.len() == 2);
-    assert!(backend.type_table.len() == 3);
+    let backend = extract(&value).unwrap();
 
     let a_sym =
         backend.symbol_table.iter()
@@ -153,4 +173,24 @@ fn run_value2() {
 
     assert!(seq_first_elem == a_id);
     assert!(seq_second_elem == b_id);
+}
+
+#[test]
+fn run_fuzzer() {
+    let mut data = [0u8; 16384];
+    rand::thread_rng().fill_bytes(&mut data);
+    let mut u = Unstructured::new(&data);
+    let mut total = 0;
+    let mut extracted = 0;
+
+    u.arbitrary_loop(Some(100), Some(10000), |u| {
+        let value = ArbitraryValue::arbitrary(u).unwrap().take();
+        if extract(&value).is_some() {
+            extracted += 1;
+        }
+        total += 1;
+        Ok(ControlFlow::Continue(()))
+    }).unwrap();
+
+    println!("generated {} arbitrary JSON values in total, tested {}", total, extracted);
 }

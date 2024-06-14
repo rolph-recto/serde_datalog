@@ -16,8 +16,7 @@ use serde_datalog::{DatalogExtractor, backend::souffle_sqlite};
 trait InputFormat<'a> {
     fn name(&self) -> String;
     fn file_extensions(&self) -> Vec<String>;
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b>
-        where 'a: 'b;
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b>;
 }
 
 #[derive(Default)]
@@ -34,7 +33,7 @@ impl<'a> InputFormat<'a> for InputFormatJSON<'a> {
         vec!["json".to_string()]
     }
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b {
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
         self.deserializer = Some(serde_json::Deserializer::from_str(contents));
         Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
     }
@@ -54,7 +53,7 @@ impl<'a> InputFormat<'a> for InputFormatTOML<'a> {
         vec!["toml".to_string()]
     }
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b {
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
         Box::new(<dyn ErasedDeserializer<'a>>::erase(toml::Deserializer::new(contents)))
     }
 }
@@ -73,7 +72,7 @@ impl<'a> InputFormat<'a> for InputFormatRON<'a> {
         vec!["ron".to_string()]
     }
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b {
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
         self.deserializer = Some(ron::Deserializer::from_str(contents).unwrap());
         Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
     }
