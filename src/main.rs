@@ -16,7 +16,7 @@ use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
 trait InputFormat<'a> {
     fn name(&self) -> String;
     fn file_extensions(&self) -> Vec<String>;
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b>;
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b;
 }
 
 #[derive(Default)]
@@ -33,8 +33,47 @@ impl<'a> InputFormat<'a> for InputFormatJSON<'a> {
         vec!["json".to_string()]
     }
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b {
         self.deserializer = Some(serde_json::Deserializer::from_str(contents));
+        Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
+    }
+}
+
+#[derive(Default)]
+struct InputFormatTOML<'a> {
+    phantom: std::marker::PhantomData<&'a ()>
+}
+
+impl<'a> InputFormat<'a> for InputFormatTOML<'a> {
+    fn name(&self) -> String {
+        "toml".to_string()
+    }
+
+    fn file_extensions(&self) -> Vec<String> {
+        vec!["toml".to_string()]
+    }
+
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b {
+        Box::new(<dyn ErasedDeserializer<'a>>::erase(toml::Deserializer::new(contents)))
+    }
+}
+
+#[derive(Default)]
+struct InputFormatRON<'a> {
+    deserializer: Option<ron::Deserializer<'a>>
+}
+
+impl<'a> InputFormat<'a> for InputFormatRON<'a> {
+    fn name(&self) -> String {
+        "ron".to_string()
+    }
+
+    fn file_extensions(&self) -> Vec<String> {
+        vec!["ron".to_string()]
+    }
+
+    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> where 'a: 'b {
+        self.deserializer = Some(ron::Deserializer::from_str(contents).unwrap());
         Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
     }
 }
@@ -62,27 +101,35 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    let mut formats = vec![
-        InputFormatJSON::default()
-    ];
-
-    let (format_auto, input): (Option<String>, String) =
+    let input: String =
         match &args.filename {
             Some(filename) => {
-                let path = Path::new(&filename);
-                let ext_opt =
-                    path.extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|s| s.to_string());
-
-                (ext_opt, fs::read_to_string(path).unwrap())
-            },
+                let path = Path::new(filename);
+                fs::read_to_string(path).unwrap()
+            }
 
             None => {
                 let mut buf = String::new();
                 io::stdin().read_to_string(&mut buf).unwrap();
-                (None, buf)
+                buf
             }
+        };
+
+    let mut formats: Vec<Box<dyn InputFormat<'_>>> = vec![
+        Box::new(InputFormatJSON::default()),
+        Box::new(InputFormatTOML::default()),
+        Box::new(InputFormatRON::default()),
+    ];
+
+    let format_auto: Option<String> =
+        match &args.filename {
+            Some(filename) => {
+                Path::new(filename).extension()
+                .and_then(|ext| ext.to_str())
+                .map(|s| s.to_string())
+            },
+
+            None => None,
         };
 
     let format_opt: Option<&mut dyn InputFormat<'_>> =
@@ -93,7 +140,7 @@ fn main() {
             (_, Some(name)) => {
                 formats.iter_mut()
                 .find(|fmt| fmt.name() == *name)
-                .map(|fmt| fmt as &mut dyn InputFormat<'_>)
+                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat<'_>)
             },
 
             (Some(ext), None) => {
@@ -102,7 +149,7 @@ fn main() {
                     fmt.file_extensions().iter()
                     .any(|fmt_ext| fmt_ext == ext)
                 })
-                .map(|fmt| fmt as &mut dyn InputFormat<'_>)
+                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat<'_>)
             },
         };
 
@@ -134,4 +181,7 @@ fn main() {
             println!("- {}", fmt.name());
         }
     }
+
+    drop(formats);
+    drop(input);
 }
