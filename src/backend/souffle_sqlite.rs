@@ -1,6 +1,6 @@
 use crate::{
     ElemId, DatalogExtractorBackend, ElemType, Result,
-    backends::vector
+    backend::vector
 };
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]

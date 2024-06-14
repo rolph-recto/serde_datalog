@@ -61,7 +61,7 @@ use std::{
     fmt::{self, Display}
 };
 
-pub mod backends;
+pub mod backend;
 
 #[derive(Debug)]
 pub enum DatalogExtractionError {

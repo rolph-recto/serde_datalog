@@ -11,7 +11,7 @@ use std::{
     path::Path
 };
 
-use serde_datalog::{DatalogExtractor, backends::souffle_sqlite};
+use serde_datalog::{DatalogExtractor, backend::souffle_sqlite};
 
 trait InputFormat<'a> {
     fn name(&self) -> String;
