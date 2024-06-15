@@ -15,14 +15,16 @@ serde = { version = "1.0.194" }
 serde-transcode = { version = "1.1.1", optional = true }
 serde_json = { version = "1.0.111", optional = true } 
 toml = { version = "0.8.8", optional = true }
+serde_yaml = { version = "0.9.30", optional = true }
 
 [features]
+default = ["all_formats"]
+binonly = ["clap", "erased-serde", "serde-transcode"]
 json = ["dep:serde_json", "dep:arbitrary", "dep:arbitrary-json"]
 toml = ["dep:toml"]
 ron = ["dep:ron"]
-all_formats = ["json", "toml", "ron"]
-binonly = ["clap", "erased-serde", "serde-transcode"]
-default = ["json"]
+yaml = ["dep:serde_yaml"]
+all_formats = ["json", "toml", "ron", "yaml"]
 
 [lib]
 name = "serde_datalog"

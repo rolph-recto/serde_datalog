@@ -17,13 +17,13 @@ pub mod input_format {
     use erased_serde::Deserializer as ErasedDeserializer;
 
     pub trait InputFormat {
-        fn name(&self) -> String;
-        fn file_extensions(&self) -> Vec<String>;
-        fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a>;
+        fn name(&self) -> &'static str;
+        fn file_extensions(&self) -> Vec<&'static str>;
+        fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input>;
     }
 
-    pub trait InputFormatData<'a> {
-        fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b>;
+    pub trait InputFormatData<'input> {
+        fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de>;
     }
 
     #[cfg(feature = "json")]
@@ -35,28 +35,28 @@ pub mod input_format {
         pub struct InputFormatJSON;
 
         impl InputFormat for InputFormatJSON {
-            fn name(&self) -> String {
-                "json".to_string()
+            fn name(&self) -> &'static str {
+                "json"
             }
 
-            fn file_extensions(&self) -> Vec<String> {
-                vec!["json".to_string()]
+            fn file_extensions(&self) -> Vec<&'static str> {
+                vec!["json"]
             }
 
-            fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a> {
+            fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input> {
                 Box::new(InputFormatJSONData {
                     deserializer: serde_json::Deserializer::from_str(contents)
                 })
             }
         }
 
-        struct InputFormatJSONData<'a> {
-            deserializer: serde_json::de::Deserializer<StrRead<'a>>
+        struct InputFormatJSONData<'input> {
+            deserializer: serde_json::de::Deserializer<StrRead<'input>>
         }
 
-        impl<'a> InputFormatData<'a> for InputFormatJSONData<'a> {
-            fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-                Box::new(<dyn ErasedDeserializer<'a>>::erase(&mut self.deserializer))
+        impl<'input> InputFormatData<'input> for InputFormatJSONData<'input> {
+            fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de> {
+                Box::new(<dyn ErasedDeserializer<'input>>::erase(&mut self.deserializer))
             }
         }
     }
@@ -69,15 +69,15 @@ pub mod input_format {
         pub struct InputFormatTOML;
 
         impl InputFormat for InputFormatTOML {
-            fn name(&self) -> String {
-                "toml".to_string()
+            fn name(&self) -> &'static str {
+                "toml"
             }
 
-            fn file_extensions(&self) -> Vec<String> {
-                vec!["toml".to_string()]
+            fn file_extensions(&self) -> Vec<&'static str> {
+                vec!["toml"]
             }
 
-            fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a> {
+            fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input> {
                 Box::new(InputFormatDataTOML { contents })
             }
         }
@@ -86,9 +86,9 @@ pub mod input_format {
             contents: &'a str
         }
 
-        impl<'a> InputFormatData<'a> for InputFormatDataTOML<'a> {
-            fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-                Box::new(<dyn ErasedDeserializer<'a>>::erase(toml::Deserializer::new(self.contents)))
+        impl<'input> InputFormatData<'input> for InputFormatDataTOML<'input> {
+            fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de> {
+                Box::new(<dyn ErasedDeserializer<'input>>::erase(toml::Deserializer::new(self.contents)))
             }
         }
     }
@@ -101,28 +101,60 @@ pub mod input_format {
         pub struct InputFormatRON;
 
         impl InputFormat for InputFormatRON {
-            fn name(&self) -> String {
-                "ron".to_string()
+            fn name(&self) -> &'static str {
+                "ron"
             }
 
-            fn file_extensions(&self) -> Vec<String> {
-                vec!["ron".to_string()]
+            fn file_extensions(&self) -> Vec<&'static str> {
+                vec!["ron"]
             }
 
-            fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a> {
+            fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input> {
                 Box::new(InputFormatDataRON { 
                     deserializer: ron::Deserializer::from_str(contents).unwrap()
                 })
             }
         }
 
-        pub struct InputFormatDataRON<'a> {
-            deserializer: ron::Deserializer<'a>
+        pub struct InputFormatDataRON<'input> {
+            deserializer: ron::Deserializer<'input>
         }
 
-        impl<'a> InputFormatData<'a> for InputFormatDataRON<'a> {
-            fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-                Box::new(<dyn ErasedDeserializer<'a>>::erase(&mut self.deserializer))
+        impl<'input> InputFormatData<'input> for InputFormatDataRON<'input> {
+            fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de> {
+                Box::new(<dyn ErasedDeserializer<'input>>::erase(&mut self.deserializer))
+            }
+        }
+    }
+
+    #[cfg(feature = "yaml")]
+    pub mod yaml {
+        use erased_serde::Deserializer as ErasedDeserializer;
+        use super::{InputFormat, InputFormatData};
+
+        pub struct InputFormatYAML;
+
+        impl InputFormat for InputFormatYAML {
+            fn name(&self) -> &'static str {
+                "yaml"
+            }
+
+            fn file_extensions(&self) -> Vec<&'static str> {
+                vec!["yaml", "yml"]
+            }
+
+            fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input> {
+                Box::new(InputFormatDataYAML { contents })
+            }
+        }
+
+        pub struct InputFormatDataYAML<'input> {
+            contents: &'input str
+        }
+
+        impl<'input> InputFormatData<'input> for InputFormatDataYAML<'input> {
+            fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de> {
+                Box::new(<dyn ErasedDeserializer<'input>>::erase(serde_yaml::Deserializer::from_str(self.contents)))
             }
         }
     }
@@ -164,6 +196,11 @@ fn get_input_formats() -> Vec<Box<dyn InputFormat>> {
     #[cfg(feature = "toml")]
     {
         formats.push(Box::new(input_format::toml::InputFormatTOML));
+    }
+
+    #[cfg(feature = "yaml")]
+    {
+        formats.push(Box::new(input_format::yaml::InputFormatYAML));
     }
 
     formats
