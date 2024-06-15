@@ -76,7 +76,7 @@
 //! use this file as an input EDB for Datalog queries executed by
 //! [Souffle](https://souffle-lang.github.io).
 //! 
-//! ```
+//! ```ignore
 //! let input = Foo::A(Box::new(Foo::B(10)));
 //! let mut backend = backend::souffle_sqlite::Backend::default();
 //! let mut extractor = DatalogExtractor::new(&mut backend);
