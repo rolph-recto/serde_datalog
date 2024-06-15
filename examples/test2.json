@@ -1,0 +1,24 @@
+{
+	"boroughs": [
+		{
+			"name": "Bronx",
+			"population": 1472654
+		},
+		{
+			"name": "Brooklyn",
+			"population": 2736074
+		},
+		{
+			"name": "Manhattan",
+			"population": 1694251
+		},
+		{
+			"name": "Queens",
+			"population": 2405464
+		},
+		{
+			"name": "Staten Island",
+			"population": 495747
+		}
+	]
+}

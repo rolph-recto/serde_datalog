@@ -1,0 +1,19 @@
+// TOML overlay schema
+
+#include "serde.dl"
+
+.decl tomlBool(id: ElemId, value: number) inline
+tomlBool(id, value) :- number(id, value).
+
+.decl tomlNumber(id: ElemId, value: number) inline
+tomlNumber(id, value) :- number(id, value).
+
+.decl tomlString(id: ElemId, value: symbol) inline
+tomlString(id, value) :- string(id, value).
+
+.decl tomlArray(id: ElemId, pos: number, value: ElemId) inline
+tomlArray(id, pos, value) :- seq(id, pos, value).
+
+// JSON keys are always strings
+.decl tomlTable(id: ElemId, key: symbol, value: ElemId) inline
+tomlTable(id, key, value) :- map(id, keyId, value), string(keyId, key).

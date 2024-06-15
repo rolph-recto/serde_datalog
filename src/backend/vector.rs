@@ -256,16 +256,16 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
 
         match elem_type {
             ElemType::Bool => {
-                type_name = "Bool";
+                type_name = BOOL_NAME;
             }
 
             ElemType::I8 | ElemType::I16 | ElemType::I32 | ElemType::I64 |
             ElemType::U8 | ElemType::U16 | ElemType::U32 | ElemType::U64 => {
-                type_name = "Number";
+                type_name = NUMBER_NAME;
             },
 
             ElemType::Char | ElemType::Str => {
-                type_name = "Str";
+                type_name = STR_NAME;
             }
 
             ElemType::F32 | ElemType::F64 | ElemType::Bytes => {
@@ -273,43 +273,43 @@ impl<'a> DatalogExtractorBackend for &'a mut Backend {
             }
 
             ElemType::Map => {
-                type_name = "Map";
+                type_name = MAP_NAME;
             }
 
             ElemType::Seq => {
-                type_name = "Seq";
+                type_name = SEQ_NAME;
             }
 
             ElemType::Struct => {
-                type_name = "Struct";
+                type_name = STRUCT_NAME;
             }
 
             ElemType::StructVariant => {
-                type_name = "StructVariant";
+                type_name = STRUCT_VARIANT_NAME;
             }
 
             ElemType::Tuple => {
-                type_name = "Tuple";
+                type_name = TUPLE_NAME;
             }
 
             ElemType::TupleStruct | ElemType::NewtypeStruct => {
-                type_name = "TupleStruct";
+                type_name = TUPLE_STRUCT_NAME;
             }
 
             ElemType::TupleVariant | ElemType::NewtypeVariant => {
-                type_name = "TupleVariant";
+                type_name = TUPLE_VARIANT_NAME;
             }
 
             ElemType::Unit => {
-                type_name = "Unit";
+                type_name = UNIT_NAME;
             }
 
             ElemType::UnitStruct => {
-                type_name = "UnitStruct";
+                type_name = UNIT_STRUCT_NAME;
             }
 
             ElemType::UnitVariant => {
-                type_name = "UnitVariant";
+                type_name = UNIT_VARIANT_NAME;
             }
         };
 

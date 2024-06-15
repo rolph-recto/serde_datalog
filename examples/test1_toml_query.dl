@@ -1,0 +1,15 @@
+// return the dependencies of the 'rand' package defined in test1.toml
+// along with their corresponding versions
+
+#include "../schemas/toml.dl"
+
+.decl depVersion(dep: symbol, version: symbol)
+depVersion(dep, version) :-
+    rootElem(root),
+    tomlTable(root, "dependencies", deps),
+    tomlTable(deps, dep, depRecord),
+    tomlTable(depRecord, "version", versionId),
+    tomlString(versionId, version).
+
+.input type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="toml.db")
+.output depVersion(IO=stdout)

@@ -2,6 +2,9 @@
 
 #include "serde.dl"
 
+.decl jsonBool(id: ElemId, value: number) inline
+jsonBool(id, value) :- number(id, value).
+
 .decl jsonNumber(id: ElemId, value: number) inline
 jsonNumber(id, value) :- number(id, value).
 

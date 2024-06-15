@@ -2,11 +2,10 @@
 
 # Serde Datalog
 
-Serde Datalog is a universal extractor of Datalog facts. It provides an
-implementation of the `Serializer` trait from [Serde](https://serde.rs/)
-to generate facts from any data structure whose type implements
-the `serde::Serializable` trait. In Datalog parlance, Serde Datalog serializes
-data structures to EDBs.
+Serde Datalog provides an implementation of the `Serializer` trait from
+[Serde](https://serde.rs/) to generate facts from any data structure whose type
+implements the `serde::Serializable` trait. In Datalog parlance, Serde Datalog
+serializes data structures to EDBs.
 
 Serde Datalog has two main components: an **extractor** that generates facts
 about data structures, and a **backend** that materializes these facts into
