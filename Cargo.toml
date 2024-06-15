@@ -3,18 +3,16 @@ name = "serde_datalog"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-arbitrary = { version = "1.3.2", features = ["derive"], optional = true }
+arbitrary = { version = "1.3.2", optional = true }
 arbitrary-json = { version = "0.1.1", optional = true }
-clap = { version = "4.4.13", features = ["derive"] }
-erased-serde = "0.4.2"
-rand = "0.8.5"
+clap = { version = "4.4.13", features = ["derive"], optional = true }
+erased-serde = { version = "0.4.2", optional = true }
+rand = { version = "0.8.5" }
 ron = { version = "0.8.1", optional = true }
 rusqlite = "0.30.0"
-serde = { version = "1.0.194", features = ["derive"] }
-serde-transcode = "1.1.1"
+serde = { version = "1.0.194" } 
+serde-transcode = { version = "1.1.1", optional = true }
 serde_json = { version = "1.0.111", optional = true } 
 toml = { version = "0.8.8", optional = true }
 
@@ -22,12 +20,15 @@ toml = { version = "0.8.8", optional = true }
 json = ["dep:serde_json", "dep:arbitrary", "dep:arbitrary-json"]
 toml = ["dep:toml"]
 ron = ["dep:ron"]
-default = []
+all_formats = ["json", "toml", "ron"]
+binonly = ["clap", "erased-serde", "serde-transcode"]
+default = ["json"]
 
 [lib]
 name = "serde_datalog"
 path = "src/lib.rs"
 
 [[bin]]
-name = "serdedl"
+name = "serde_datalog"
 path = "src/main.rs"
+required-features = ["binonly"]
