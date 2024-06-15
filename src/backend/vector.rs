@@ -5,6 +5,20 @@ use crate::{ElemId, DatalogExtractorBackend, ElemType, Result, DatalogExtraction
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct SymbolId(pub usize);
 
+const BOOL_NAME: &'static str = "Bool";
+const NUMBER_NAME: &'static str = "Number";
+const STR_NAME: &'static str = "Str";
+const MAP_NAME: &'static str = "Map";
+const SEQ_NAME: &'static str = "Seq";
+const STRUCT_NAME: &'static str = "Struct";
+const STRUCT_VARIANT_NAME: &'static str = "StructVariant";
+const TUPLE_NAME: &'static str = "Tuple";
+const TUPLE_STRUCT_NAME: &'static str = "TupleStruct";
+const TUPLE_VARIANT_NAME: &'static str = "TupleVariant";
+const UNIT_NAME: &'static str = "Unit";
+const UNIT_STRUCT_NAME: &'static str = "UnitStruct";
+const UNIT_VARIANT_NAME: &'static str = "UnitVariant";
+
 /// DatalogExtractorBackend impl that stores facts in vectors.
 pub struct Backend {
     cur_symbol_id: SymbolId,
@@ -43,20 +57,37 @@ pub struct Backend {
 
 impl Default for Backend {
     fn default() -> Self {
-        Self {
-            cur_symbol_id: SymbolId(1),
-            symbol_table: Default::default(),
-            type_table: Default::default(),
-            bool_table: Default::default(),
-            number_table: Default::default(),
-            string_table: Default::default(),
-            map_table: Default::default(),
-            struct_type_table: Default::default(),
-            struct_table: Default::default(),
-            seq_table: Default::default(),
-            variant_type_table: Default::default(),
-            tuple_table: Default::default()
-        }
+        let mut backend = 
+            Self {
+                cur_symbol_id: SymbolId(1),
+                symbol_table: Default::default(),
+                type_table: Default::default(),
+                bool_table: Default::default(),
+                number_table: Default::default(),
+                string_table: Default::default(),
+                map_table: Default::default(),
+                struct_type_table: Default::default(),
+                struct_table: Default::default(),
+                seq_table: Default::default(),
+                variant_type_table: Default::default(),
+                tuple_table: Default::default()
+            };
+        
+        backend.intern_string(BOOL_NAME);
+        backend.intern_string(NUMBER_NAME);
+        backend.intern_string(STR_NAME);
+        backend.intern_string(MAP_NAME);
+        backend.intern_string(SEQ_NAME);
+        backend.intern_string(STRUCT_NAME);
+        backend.intern_string(STRUCT_VARIANT_NAME);
+        backend.intern_string(TUPLE_NAME);
+        backend.intern_string(TUPLE_STRUCT_NAME);
+        backend.intern_string(TUPLE_VARIANT_NAME);
+        backend.intern_string(UNIT_NAME);
+        backend.intern_string(UNIT_STRUCT_NAME);
+        backend.intern_string(UNIT_VARIANT_NAME);
+
+        backend
     }
 }
 

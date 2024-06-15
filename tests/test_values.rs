@@ -86,7 +86,19 @@ fn extract(value: &Value) -> Option<backend::vector::Backend> {
 
     return match res {
         Ok(_) => {
+            let map_sym = backend.symbol_table.get("Map").unwrap();
+            let seq_sym = backend.symbol_table.get("Seq").unwrap();
+
+            let (map_count, seq_count) = 
+                backend.type_table.iter().fold((0, 0), |acc, row| {
+                    let map_inc = if row.1 == *map_sym { 1 } else { 0 };
+                    let seq_inc = if row.1 == *seq_sym { 1 } else { 0 };
+                    (acc.0 + map_inc, acc.1 + seq_inc)
+                });
+
             let c = ValueCount::get(&value);
+            assert!(map_count == c.object);
+            assert!(seq_count == c.array);
             assert!(backend.map_table.len() == c.object_fields);
             assert!(backend.seq_table.len() == c.array_elements);
             assert!(backend.bool_table.len() == c.bool);
@@ -183,7 +195,7 @@ fn run_fuzzer() {
     let mut total = 0;
     let mut extracted = 0;
 
-    u.arbitrary_loop(Some(100), Some(10000), |u| {
+    u.arbitrary_loop(Some(10000), Some(10000), |u| {
         let value = ArbitraryValue::arbitrary(u).unwrap().take();
         if extract(&value).is_some() {
             extracted += 1;

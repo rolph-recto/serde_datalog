@@ -9,7 +9,7 @@
 //! not explicitly represent these facts; instead, it calls out into
 //! implementations of the [DatalogExtractorBackend] trait, which materializes
 //! these facts into some explicit representation. For example,
-//! the [backends::souffle_sqlite::Backend] stores these facts within tables
+//! the [backend::souffle_sqlite::Backend] stores these facts within tables
 //! of a [SQLite](https://www.sqlite.org/) database.
 //! 
 //! # Example
