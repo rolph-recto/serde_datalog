@@ -1,7 +1,10 @@
+//! A backend that stores facts as vectors of tuples.
+
 use std::collections::HashMap;
 
 use crate::{ElemId, DatalogExtractorBackend, ElemType, Result, DatalogExtractionError};
 
+/// Identifier for an interned string.
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub struct SymbolId(pub usize);
 
@@ -20,38 +23,56 @@ const UNIT_STRUCT_NAME: &'static str = "UnitStruct";
 const UNIT_VARIANT_NAME: &'static str = "UnitVariant";
 
 /// DatalogExtractorBackend impl that stores facts in vectors.
+/// Note that this backend interns strings, so tables store a string's
+/// [SymbolId] instead of the string itself.
+/// 
+/// Note that this backend does **not** support extraction of
+/// floating point values, and will return a
+/// [UnextractableData][DatalogExtractionError::UnextractableData] error if
+/// the input contains such values.
 pub struct Backend {
     cur_symbol_id: SymbolId,
+
+    /// Intern table for strings.
     pub symbol_table: HashMap<String, SymbolId>,
 
-    // (elem, elem type)
+    /// Columns: (elem, elem type)
     pub type_table: Vec<(ElemId, SymbolId)>,
 
-    // (elem, value)
+    /// Stores values of boolean elements.
+    /// Columns: (elem, value)
     pub bool_table: Vec<(ElemId, bool)>,
 
-    // (elem, value)
+    /// Stores values of number elements.
+    /// Columns: (elem, value)
     pub number_table: Vec<(ElemId, isize)>,
 
-    // (elem, symbol)
+    /// Stores values of string elements.
+    /// Columns: (elem, symbol)
     pub string_table: Vec<(ElemId, SymbolId)>,
 
-    // (elem, key, value)
+    /// Stores map entry facts.
+    /// Columns: (elem, key, value)
     pub map_table: Vec<(ElemId, ElemId, ElemId)>,
 
-    // (elem, struct name)
+    /// Stores type names of structs.
+    /// Columns: (elem, struct name)
     pub struct_type_table: Vec<(ElemId, SymbolId)>,
 
-    // (elem, field name, value elem)
+    /// Stores struct field facts.
+    /// Columns: (elem, field name, value elem)
     pub struct_table: Vec<(ElemId, SymbolId, ElemId)>,
 
-    // (elem, index, value)
+    /// Stores sequence entry facts.
+    /// Columns: (elem, index, value)
     pub seq_table: Vec<(ElemId, usize, ElemId)>,
 
-    // (elem, enum name, variant name)
+    /// Stores type and variant names of variant elements.
+    /// (elem, enum name, variant name)
     pub variant_type_table: Vec<(ElemId, SymbolId, SymbolId)>,
 
-    // (elem, index, value)
+    /// Stores tuple entry facts.
+    /// Columns: (elem, index, value)
     pub tuple_table: Vec<(ElemId, usize, ElemId)>,
 }
 
@@ -104,7 +125,7 @@ impl Backend {
         }
     }
 
-    /// Print generate fact tables to standard output.
+    /// Print generated fact tables to standard output.
     pub fn dump(&self) {
         if !self.symbol_table.is_empty() {
             println!("{:^33}", "Symbol Table");

@@ -64,7 +64,11 @@ Serde Datalog comes with the following built-in backends:
 
 - a backend that stores fact as tables in a [SQLite](https://www.sqlite.org/) database
 
+## Command-line Tool
+
+Serde Datalog also comes as a command-line tool that can convert data from a
+variety of input formats to 
+
 ## To Do
 - [ ] move booleans away from number table
-- [ ] more input data formats (YAML)
 - [ ] serdedl: allow multiple input files

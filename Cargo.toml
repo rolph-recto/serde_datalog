@@ -19,11 +19,22 @@ serde_yaml = { version = "0.9.30", optional = true }
 
 [features]
 default = ["json"]
+
+# dependencies only needed by the serde_datalog binary 
 bin_only = ["clap", "erased-serde", "serde-transcode"]
+
+# support for converting JSON files with the serde_datalog binary 
 json = ["dep:serde_json", "dep:arbitrary", "dep:arbitrary-json"]
-toml = ["dep:toml"]
+
+# support for converting RON files with the serde_datalog binary 
 ron = ["dep:ron"]
+
+# support for converting TOML files with the serde_datalog binary 
+toml = ["dep:toml"]
+
+# support for converting YAML files with the serde_datalog binary 
 yaml = ["dep:serde_yaml"]
+
 all_formats = ["json", "toml", "ron", "yaml"]
 all = ["bin_only", "all_formats"]
 

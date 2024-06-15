@@ -1,3 +1,6 @@
+//! A backend that stores facts in a [SQLite](https://sqlite.org) database,
+//! in the format expected by [Souffle](https://souffle-lang.github.io/).
+
 use crate::{
     ElemId, DatalogExtractorBackend, ElemType, Result,
     backend::vector
@@ -6,9 +9,35 @@ use crate::{
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 struct SymbolId(usize);
 
-/// DatalogExtractorBackend impl that stores facts in a SQLite database.
+/// DatalogExtractorBackend impl that stores facts in a [SQLite](https://sqlite.org)
+/// database.
 /// The database conforms to the input format for [Souffle](https://souffle-lang.github.io/),
 /// a high-performance Datalog implementation.
+/// 
+/// The backend stores facts in the following Souffle schema:
+/// 
+/// ```text
+/// .type ElemId <: number
+/// .type ElemType <: symbol
+/// .type Field <: symbol
+/// .type TypeName <: symbol
+/// .type VariantName <: symbol
+///
+/// .decl type(id: ElemId, type: ElemType)
+/// .decl number(id: ElemId, value: number)
+/// .decl string(id: ElemId, value: symbol)
+/// .decl map(id: ElemId, key: ElemId, value: ElemId)
+/// .decl struct(id: ElemId, field: Field, value: ElemId)
+/// .decl seq(id: ElemId, pos: number, value: ElemId)
+/// .decl tuple(id: ElemId, pos: number, value: ElemId)
+/// .decl structType(id: ElemId, type: TypeName)
+/// .decl variantType(id: ElemId, type: TypeName, variant: VariantName)
+/// ```
+/// 
+/// Note that this backend does **not** support extraction of
+/// floating point values, and will return a
+/// [UnextractableData][crate::DatalogExtractionError::UnextractableData] error if
+/// the input contains such values.
 pub struct Backend {
     vector_backend: vector::Backend,
 }
@@ -27,6 +56,7 @@ impl Backend {
         self.vector_backend.dump()
     }
 
+    /// Store facts in a SQLite file with name `filename`.
     pub fn dump_to_db(&self, filename: &str) -> rusqlite::Result<()> {
         let conn = rusqlite::Connection::open(filename)?;
         conn.execute_batch(
