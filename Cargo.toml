@@ -18,7 +18,7 @@ toml = { version = "0.8.8", optional = true }
 serde_yaml = { version = "0.9.30", optional = true }
 
 [features]
-default = ["all_formats"]
+default = ["json"]
 bin_only = ["clap", "erased-serde", "serde-transcode"]
 json = ["dep:serde_json", "dep:arbitrary", "dep:arbitrary-json"]
 toml = ["dep:toml"]
