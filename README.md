@@ -17,7 +17,7 @@ backend to change the representation of facts.
 
 Consider the following enum type:
 
-```
+```rust
 enum Foo {
     A(Box<Foo>),
     B(i64)
