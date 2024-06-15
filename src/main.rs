@@ -2,9 +2,7 @@
 //! converts from a variety of common data formats into an input EDB for a
 //! Datalog program.
 
-use erased_serde::Deserializer as ErasedDeserializer;
 use clap::Parser;
-use serde_json::de::StrRead;
 use std::{
     io::{self, Read},
     fs,
@@ -13,68 +11,120 @@ use std::{
 
 use serde_datalog::{DatalogExtractor, backend::souffle_sqlite};
 
-trait InputFormat<'a> {
-    fn name(&self) -> String;
-    fn file_extensions(&self) -> Vec<String>;
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b>;
-}
+use input_format::InputFormat;
 
-#[derive(Default)]
-struct InputFormatJSON<'a> {
-    deserializer: Option<serde_json::de::Deserializer<StrRead<'a>>>
-}
+pub mod input_format {
+    use erased_serde::Deserializer as ErasedDeserializer;
 
-impl<'a> InputFormat<'a> for InputFormatJSON<'a> {
-    fn name(&self) -> String {
-        "json".to_string()
+    pub trait InputFormat {
+        fn name(&self) -> String;
+        fn file_extensions(&self) -> Vec<String>;
+        fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a>;
     }
 
-    fn file_extensions(&self) -> Vec<String> {
-        vec!["json".to_string()]
+    pub trait InputFormatData<'a> {
+        fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b>;
     }
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-        self.deserializer = Some(serde_json::Deserializer::from_str(contents));
-        Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
+    #[cfg(feature = "json")]
+    pub mod json {
+        use erased_serde::Deserializer as ErasedDeserializer;
+        use serde_json::de::StrRead;
+        use super::{InputFormat, InputFormatData};
+
+        pub struct InputFormatJSON;
+
+        impl InputFormat for InputFormatJSON {
+            fn name(&self) -> String {
+                "json".to_string()
+            }
+
+            fn file_extensions(&self) -> Vec<String> {
+                vec!["json".to_string()]
+            }
+
+            fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a> {
+                Box::new(InputFormatJSONData {
+                    deserializer: serde_json::Deserializer::from_str(contents)
+                })
+            }
+        }
+
+        struct InputFormatJSONData<'a> {
+            deserializer: serde_json::de::Deserializer<StrRead<'a>>
+        }
+
+        impl<'a> InputFormatData<'a> for InputFormatJSONData<'a> {
+            fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
+                Box::new(<dyn ErasedDeserializer<'a>>::erase(&mut self.deserializer))
+            }
+        }
     }
-}
+    
+    #[cfg(feature = "toml")]
+    pub mod toml {
+        use erased_serde::Deserializer as ErasedDeserializer;
+        use super::{InputFormat, InputFormatData};
 
-#[derive(Default)]
-struct InputFormatTOML<'a> {
-    phantom: std::marker::PhantomData<&'a ()>
-}
+        pub struct InputFormatTOML;
 
-impl<'a> InputFormat<'a> for InputFormatTOML<'a> {
-    fn name(&self) -> String {
-        "toml".to_string()
+        impl InputFormat for InputFormatTOML {
+            fn name(&self) -> String {
+                "toml".to_string()
+            }
+
+            fn file_extensions(&self) -> Vec<String> {
+                vec!["toml".to_string()]
+            }
+
+            fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a> {
+                Box::new(InputFormatDataTOML { contents })
+            }
+        }
+
+        pub struct InputFormatDataTOML<'a> {
+            contents: &'a str
+        }
+
+        impl<'a> InputFormatData<'a> for InputFormatDataTOML<'a> {
+            fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
+                Box::new(<dyn ErasedDeserializer<'a>>::erase(toml::Deserializer::new(self.contents)))
+            }
+        }
     }
 
-    fn file_extensions(&self) -> Vec<String> {
-        vec!["toml".to_string()]
-    }
+    #[cfg(feature = "ron")]
+    pub mod ron {
+        use erased_serde::Deserializer as ErasedDeserializer;
+        use super::{InputFormat, InputFormatData};
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-        Box::new(<dyn ErasedDeserializer<'a>>::erase(toml::Deserializer::new(contents)))
-    }
-}
+        pub struct InputFormatRON;
 
-#[derive(Default)]
-struct InputFormatRON<'a> {
-    deserializer: Option<ron::Deserializer<'a>>
-}
+        impl InputFormat for InputFormatRON {
+            fn name(&self) -> String {
+                "ron".to_string()
+            }
 
-impl<'a> InputFormat<'a> for InputFormatRON<'a> {
-    fn name(&self) -> String {
-        "ron".to_string()
-    }
+            fn file_extensions(&self) -> Vec<String> {
+                vec!["ron".to_string()]
+            }
 
-    fn file_extensions(&self) -> Vec<String> {
-        vec!["ron".to_string()]
-    }
+            fn create<'a>(&self, contents: &'a str) -> Box<dyn InputFormatData<'a> + 'a> {
+                Box::new(InputFormatDataRON { 
+                    deserializer: ron::Deserializer::from_str(contents).unwrap()
+                })
+            }
+        }
 
-    fn create_deserializer<'b>(&'b mut self, contents: &'a str) -> Box<dyn ErasedDeserializer<'a> + 'b> {
-        self.deserializer = Some(ron::Deserializer::from_str(contents).unwrap());
-        Box::new(<dyn ErasedDeserializer<'a>>::erase(self.deserializer.as_mut().unwrap()))
+        pub struct InputFormatDataRON<'a> {
+            deserializer: ron::Deserializer<'a>
+        }
+
+        impl<'a> InputFormatData<'a> for InputFormatDataRON<'a> {
+            fn deserializer<'b>(&'b mut self) -> Box<dyn ErasedDeserializer<'a> + 'b> {
+                Box::new(<dyn ErasedDeserializer<'a>>::erase(&mut self.deserializer))
+            }
+        }
     }
 }
 
@@ -98,6 +148,27 @@ struct Args {
     output: Option<String>,
 }
 
+fn get_input_formats() -> Vec<Box<dyn InputFormat>> {
+    let mut formats: Vec<Box<dyn InputFormat>> = Vec::new();
+
+    #[cfg(feature = "json")]
+    {
+        formats.push(Box::new(input_format::json::InputFormatJSON));
+    }
+
+    #[cfg(feature = "ron")]
+    {
+        formats.push(Box::new(input_format::ron::InputFormatRON));
+    }
+    
+    #[cfg(feature = "toml")]
+    {
+        formats.push(Box::new(input_format::toml::InputFormatTOML));
+    }
+
+    formats
+}
+
 fn main() {
     let args = Args::parse();
 
@@ -115,11 +186,7 @@ fn main() {
             }
         };
 
-    let mut formats: Vec<Box<dyn InputFormat<'_>>> = vec![
-        Box::new(InputFormatJSON::default()),
-        Box::new(InputFormatTOML::default()),
-        Box::new(InputFormatRON::default()),
-    ];
+    let mut formats: Vec<Box<dyn InputFormat>> = get_input_formats();
 
     let format_auto: Option<String> =
         match &args.filename {
@@ -132,7 +199,7 @@ fn main() {
             None => None,
         };
 
-    let format_opt: Option<&mut dyn InputFormat<'_>> =
+    let format_opt: Option<&mut dyn InputFormat> =
         match (&format_auto, &args.format) {
             (None, None) => None,
 
@@ -140,7 +207,7 @@ fn main() {
             (_, Some(name)) => {
                 formats.iter_mut()
                 .find(|fmt| fmt.name() == *name)
-                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat<'_>)
+                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat)
             },
 
             (Some(ext), None) => {
@@ -149,12 +216,13 @@ fn main() {
                     fmt.file_extensions().iter()
                     .any(|fmt_ext| fmt_ext == ext)
                 })
-                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat<'_>)
+                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat)
             },
         };
 
     if let Some(format) = format_opt {
-        let mut deserializer = format.create_deserializer(&input);
+        let mut format_data = format.create(&input);
+        let mut deserializer = format_data.deserializer();
         let mut souffle_sqlite = souffle_sqlite::Backend::default();
 
         let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
