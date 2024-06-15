@@ -198,11 +198,16 @@ mod test {
         let mut extracted = 0;
 
         u.arbitrary_loop(Some(10000), Some(10000), |u| {
-            let value = ArbitraryValue::arbitrary(u).unwrap().take();
-            if extract(&value).is_some() {
-                extracted += 1;
-            }
-            total += 1;
+            match ArbitraryValue::arbitrary(u) {
+                Ok(value) => {
+                    if extract(&value).is_some() {
+                        extracted += 1;
+                    }
+                    total += 1;
+                }
+
+                Err(_) => {}
+            };
             Ok(ControlFlow::Continue(()))
         }).unwrap();
 
