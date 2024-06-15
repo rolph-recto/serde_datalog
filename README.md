@@ -87,6 +87,6 @@ backend.dump_to_db("input.db");
 
 Serde Datalog also comes as a command-line tool `serde_datalog` that can convert
 data from a variety of input formats such as JSON or YAML to a SQLite file
-using the Souffle SQLite backend. This allows you to use Datalog as a query
-language for data formats, much like [jq](https://jqlang.github.io/jq/)
+using the Souffle SQLite backend. This allows you to use Souffle Datalog as a
+query language for data formats, much like [jq](https://jqlang.github.io/jq/)
 or [yq](https://mikefarah.gitbook.io/yq).
