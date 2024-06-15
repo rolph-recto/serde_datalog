@@ -15,9 +15,10 @@ backend to change the representation of facts.
 
 # Example
 
-Consider the following enum type:
+Consider the following enum type that implements the `Serialize` trait:
 
 ```rust
+#[derive(Serialize)]
 enum Foo {
     A(Box<Foo>),
     B(i64)
