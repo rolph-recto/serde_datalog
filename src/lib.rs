@@ -47,8 +47,8 @@
 //! For each fact, the extractor will make calls to an implementation
 //! of [DatalogExtractorBackend] to materialize the fact. For example, we can
 //! use the [vector backend][backend::vector::Backend] to materialize these
-//! extracted facts as vectors of tuples. You can use these vectors as inputs
-//! to queries for Datalog engines embedded in Rust, such as 
+//! extracted facts as vectors of tuples. You can then use these vectors as
+//! inputs to queries for Datalog engines embedded in Rust, such as 
 //! [Ascent](https://crates.io/crates/ascent) or
 //! [Crepe](https://docs.rs/crepe/latest/crepe/).
 //! 
@@ -71,9 +71,9 @@
 //! assert!(backend.number_table.len() == 1);
 //! ```
 //! 
-//! Alternatively, you can store the generated facts in a SQLite file with the
-//! [Souffle SQLite backend][backend::souffle_sqlite::Backend]. You can then
-//! use this file as an input EDB for Datalog queries executed by
+//! Alternatively, you can store the generated facts in a [SQLite](https://sqlite.org)
+//! file with the [Souffle SQLite backend][backend::souffle_sqlite::Backend].
+//! You can then use this file as an input EDB for Datalog queries executed by
 //! [Souffle](https://souffle-lang.github.io).
 //! 
 //! ```ignore
@@ -83,7 +83,6 @@
 //! input.serialize(&mut extractor);
 //! backend.dump_to_db("input.db");
 //! ```
-//! 
 
 use serde::ser;
 use std::{

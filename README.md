@@ -43,32 +43,50 @@ and references between elements are
 into identifiers.
 
 For each of these facts, the extractor will make the following calls to an
-implementation of [DatalogExtractorBackend]:
+extractor backend.
 
+For each fact, the extractor will make calls to an extractor backend 
+to materialize the fact. For example, we can use the vector backend to
+materialize these extracted facts as vectors of tuples.
+You can then use these vectors as inputs to queries for Datalog engines embedded
+in Rust, such as [Ascent](https://crates.io/crates/ascent) or
+[Crepe](https://docs.rs/crepe/latest/crepe/).
+
+```rust
+let input = Foo::A(Box::new(Foo::B(10)));
+let mut backend = backend::vector::Backend::default();
+let mut extractor = DatalogExtractor::new(&mut backend);
+input.serialize(&mut extractor);
+
+// Now we can inspect the tables in the backend to see what facts got
+// extracted from the input.
+
+// there are 3 total elements
+assert!(backend.type_table.len() == 3);
+
+// there are 2 enum variant elements
+assert!(backend.variant_type_table.len() == 2);
+
+// there is 1 number element
+assert!(backend.number_table.len() == 1);
 ```
-backend.add_elem(elemId(1), elemType::TupleVariant)
-backend.add_variant_type(elemId(1), "Foo", "A")
-backend.add_tuple(elemId(1), 0, elemId(2))
-backend.add_elem(elemId(2), elemType::TupleVariant)
-backend.add_variant_type(elemId(1), "Foo", "B")
-backend.add_tuple(elemId(2), 0, elemId(3))
-backend.add_elem(elemId(3), elemType::I64)
-backend.add_i64(elemId(3), 10)
+
+Alternatively, you can store the generated facts in a [SQLite](https://sqlite)
+file with the Souffle SQLite backend. You can then use this file as an input
+EDB for Datalog queries executed by [Souffle](https://souffle-lang.github.io).
+
+```rust
+let input = Foo::A(Box::new(Foo::B(10)));
+let mut backend = backend::souffle_sqlite::Backend::default();
+let mut extractor = DatalogExtractor::new(&mut backend);
+input.serialize(&mut extractor);
+backend.dump_to_db("input.db");
 ```
-
-## Backends
-
-Serde Datalog comes with the following built-in backends:
-
-- a backend that stores facts as tuples in vectors
-
-- a backend that stores fact as tables in a [SQLite](https://www.sqlite.org/) database
 
 ## Command-line Tool
 
-Serde Datalog also comes as a command-line tool that can convert data from a
-variety of input formats to 
-
-## To Do
-- [ ] move booleans away from number table
-- [ ] serdedl: allow multiple input files
+Serde Datalog also comes as a command-line tool `serde_datalog` that can convert
+data from a variety of input formats such as JSON or YAML to a SQLite file
+using the Souffle SQLite backend. This allows you to use Datalog as a query
+language for data formats, much like [jq](https://jqlang.github.io/jq/)
+or [yq](https://mikefarah.gitbook.io/yq).
