@@ -19,12 +19,13 @@ serde_yaml = { version = "0.9.30", optional = true }
 
 [features]
 default = ["all_formats"]
-binonly = ["clap", "erased-serde", "serde-transcode"]
+bin_only = ["clap", "erased-serde", "serde-transcode"]
 json = ["dep:serde_json", "dep:arbitrary", "dep:arbitrary-json"]
 toml = ["dep:toml"]
 ron = ["dep:ron"]
 yaml = ["dep:serde_yaml"]
 all_formats = ["json", "toml", "ron", "yaml"]
+all = ["bin_only", "all_formats"]
 
 [lib]
 name = "serde_datalog"
@@ -33,4 +34,4 @@ path = "src/lib.rs"
 [[bin]]
 name = "serde_datalog"
 path = "src/main.rs"
-required-features = ["binonly"]
+required-features = ["bin_only"]
