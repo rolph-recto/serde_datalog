@@ -1,7 +1,12 @@
 [package]
 name = "serde_datalog"
+description = "A Serde serializer that extracts Datalog facts"
+repository = "https://github.com/rolph-recto/serde_datalog"
+keywords = ["serde", "datalog"]
 version = "0.1.0"
 edition = "2021"
+readme = "README.md"
+license-file = "LICENSE"
 
 [dependencies]
 arbitrary = { version = "1.3.2", optional = true }
