@@ -1,3 +1,7 @@
+// run:
+// serde_dialog test1.toml -o test1_toml.db
+// souffle test1_toml_query.dl
+
 // return the dependencies of the 'rand' package defined in test1.toml
 // along with their corresponding versions
 
@@ -11,5 +15,5 @@ depVersion(dep, version) :-
     tomlTable(depRecord, "version", versionId),
     tomlString(versionId, version).
 
-.input type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="toml.db")
+.input type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="test1_toml.db")
 .output depVersion(IO=stdout)
