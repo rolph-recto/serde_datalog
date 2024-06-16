@@ -1,4 +1,6 @@
 [![Rust](https://github.com/rolph-recto/serde_datalog/actions/workflows/rust.yml/badge.svg)](https://github.com/rolph-recto/serde_datalog/actions/workflows/rust.yml)
+[![Crates.io](https://img.shields.io/crates/v/serde_datalog?color=blue)](https://crates.io/crates/serde_datalog)
+[![docs.rs]](https://img.shields.io/docsrs/serde_datalog)
 
 # Serde Datalog
 
