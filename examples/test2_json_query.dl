@@ -5,15 +5,15 @@
 // return the total population of New York City according to the 2020 census
 // by aggregating borough population counts
 
-#include "../schemas/json.dl"
+#include "../schemas/serde_string_key.dl"
 
 .decl boroPopulation(boro: ElemId, population: number)
 boroPopulation(boro, population) :-
     rootElem(root),
-    jsonRecord(root, "boroughs", boroList),
-    jsonList(boroList, _, boro),
-    jsonRecord(boro, "population", popId),
-    jsonNumber(popId, population).
+    map(root, "boroughs", boroList),
+    seq(boroList, _, boro),
+    map(boro, "population", popId),
+    number(popId, population).
 
 .decl totalPopulation(total: number)
 totalPopulation(sum pop : { boroPopulation(_, pop) }).

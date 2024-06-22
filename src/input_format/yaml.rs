@@ -1,5 +1,5 @@
-use erased_serde::Deserializer as ErasedDeserializer;
 use super::{InputFormat, InputFormatData};
+use erased_serde::Deserializer as ErasedDeserializer;
 
 pub struct InputFormatYAML;
 
@@ -18,11 +18,13 @@ impl InputFormat for InputFormatYAML {
 }
 
 pub struct InputFormatDataYAML<'input> {
-    contents: &'input str
+    contents: &'input str,
 }
 
 impl<'input> InputFormatData<'input> for InputFormatDataYAML<'input> {
     fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de> {
-        Box::new(<dyn ErasedDeserializer<'input>>::erase(serde_yaml::Deserializer::from_str(self.contents)))
+        Box::new(<dyn ErasedDeserializer<'input>>::erase(
+            serde_yaml::Deserializer::from_str(self.contents),
+        ))
     }
 }
