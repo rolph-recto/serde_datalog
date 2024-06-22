@@ -1,7 +1,7 @@
 use erased_serde::Deserializer as ErasedDeserializer;
 
 /// An input format from which data can be extracted into Datalog facts.
-/// Implementations of this trait can generate 
+/// Implementations of this trait can generate
 pub trait InputFormat {
     /// The name of the input format. This name can be passed explicitly as the
     /// format of an input file.

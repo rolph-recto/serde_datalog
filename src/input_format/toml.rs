@@ -1,5 +1,5 @@
-use erased_serde::Deserializer as ErasedDeserializer;
 use super::{InputFormat, InputFormatData};
+use erased_serde::Deserializer as ErasedDeserializer;
 
 pub struct InputFormatTOML;
 
@@ -18,11 +18,13 @@ impl InputFormat for InputFormatTOML {
 }
 
 pub struct InputFormatDataTOML<'a> {
-    contents: &'a str
+    contents: &'a str,
 }
 
 impl<'input> InputFormatData<'input> for InputFormatDataTOML<'input> {
     fn deserializer<'de>(&'de mut self) -> Box<dyn ErasedDeserializer<'input> + 'de> {
-        Box::new(<dyn ErasedDeserializer<'input>>::erase(toml::Deserializer::new(self.contents)))
+        Box::new(<dyn ErasedDeserializer<'input>>::erase(
+            toml::Deserializer::new(self.contents),
+        ))
     }
 }

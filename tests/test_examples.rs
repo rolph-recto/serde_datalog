@@ -1,17 +1,16 @@
-use std::{fs, path::PathBuf};
 use serde::Serialize;
-use serde_datalog::{DatalogExtractor, backend::souffle_sqlite};
+use serde_datalog::{backend::souffle_sqlite, DatalogExtractor};
+use std::{fs, path::PathBuf};
 
 fn get_example_files(extension: &str) -> Vec<PathBuf> {
-    fs::read_dir("./examples/").unwrap().into_iter()
-    .map(|path| path.unwrap().path())
-    .filter(|path| {
-        match path.extension() {
+    fs::read_dir("./examples/")
+        .unwrap()
+        .map(|path| path.unwrap().path())
+        .filter(|path| match path.extension() {
             Some(path_ext) => path_ext == extension,
             None => false,
-        }
-    })
-    .collect()
+        })
+        .collect()
 }
 
 fn run_example<T: Serialize>(value: T) {
@@ -23,7 +22,7 @@ fn run_example<T: Serialize>(value: T) {
 
 fn run_examples<T: Serialize>(extension: &str, value_builder: fn(String) -> T) {
     let files = get_example_files(extension);
-    if files.len() > 0 {
+    if !files.is_empty() {
         println!("discovered {} example .{} file(s)", files.len(), extension);
 
         for file in get_example_files(extension) {
@@ -32,7 +31,6 @@ fn run_examples<T: Serialize>(extension: &str, value_builder: fn(String) -> T) {
             let value = value_builder(input);
             run_example(value);
         }
-
     } else {
         println!("discovered no .{} tests :(", extension);
     }

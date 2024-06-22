@@ -6,12 +6,12 @@ pub mod input_format;
 
 use clap::Parser;
 use std::{
-    io::{self, Read},
     fs,
-    path::Path
+    io::{self, Read},
+    path::Path,
 };
 
-use serde_datalog::{DatalogExtractor, backend::souffle_sqlite};
+use serde_datalog::{backend::souffle_sqlite, DatalogExtractor};
 
 use crate::input_format::InputFormat;
 
@@ -28,13 +28,25 @@ struct Args {
     )]
     filename: Option<String>,
 
-    #[arg(short = 'f', long = "format", help = "Format of input file; if absent, will guess format from file extension")]
+    #[arg(
+        short = 'f',
+        long = "format",
+        help = "Format of input file; if absent, will guess format from file extension"
+    )]
     format: Option<String>,
 
-    #[arg(short = 'o', long = "output", help = "File name of output SQLite database")]
+    #[arg(
+        short = 'o',
+        long = "output",
+        help = "File name of output SQLite database"
+    )]
     output: Option<String>,
 
-    #[arg(short = 'l', long = "list-formats", help = "Generate a list of supported file formats")]
+    #[arg(
+        short = 'l',
+        long = "list-formats",
+        help = "Generate a list of supported file formats"
+    )]
     list_formats: bool,
 }
 
@@ -50,7 +62,7 @@ fn get_input_formats() -> Vec<Box<dyn InputFormat>> {
     {
         formats.push(Box::new(crate::input_format::ron::InputFormatRON));
     }
-    
+
     #[cfg(feature = "toml")]
     {
         formats.push(Box::new(crate::input_format::toml::InputFormatTOML));
@@ -93,51 +105,42 @@ fn main() {
         return;
     }
 
-    let input: String =
-        match &args.filename {
-            Some(filename) => {
-                let path = Path::new(filename);
-                fs::read_to_string(path).unwrap()
-            }
+    let input: String = match &args.filename {
+        Some(filename) => {
+            let path = Path::new(filename);
+            fs::read_to_string(path).unwrap()
+        }
 
-            None => {
-                let mut buf = String::new();
-                io::stdin().read_to_string(&mut buf).unwrap();
-                buf
-            }
-        };
+        None => {
+            let mut buf = String::new();
+            io::stdin().read_to_string(&mut buf).unwrap();
+            buf
+        }
+    };
 
-    let format_auto: Option<String> =
-        match &args.filename {
-            Some(filename) => {
-                Path::new(filename).extension()
-                .and_then(|ext| ext.to_str())
-                .map(|s| s.to_string())
-            },
+    let format_auto: Option<String> = match &args.filename {
+        Some(filename) => Path::new(filename)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|s| s.to_string()),
 
-            None => None,
-        };
+        None => None,
+    };
 
-    let format_opt: Option<&mut dyn InputFormat> =
-        match (&format_auto, &args.format) {
-            (None, None) => None,
+    let format_opt: Option<&mut dyn InputFormat> = match (&format_auto, &args.format) {
+        (None, None) => None,
 
-            // format specified with -f overrides format from file extension
-            (_, Some(name)) => {
-                formats.iter_mut()
-                .find(|fmt| fmt.name() == *name)
-                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat)
-            },
+        // format specified with -f overrides format from file extension
+        (_, Some(name)) => formats
+            .iter_mut()
+            .find(|fmt| fmt.name() == *name)
+            .map(|fmt| fmt.as_mut() as &mut dyn InputFormat),
 
-            (Some(ext), None) => {
-                formats.iter_mut()
-                .find(|fmt| {
-                    fmt.file_extensions().iter()
-                    .any(|fmt_ext| fmt_ext == ext)
-                })
-                .map(|fmt| fmt.as_mut() as &mut dyn InputFormat)
-            },
-        };
+        (Some(ext), None) => formats
+            .iter_mut()
+            .find(|fmt| fmt.file_extensions().iter().any(|fmt_ext| fmt_ext == ext))
+            .map(|fmt| fmt.as_mut() as &mut dyn InputFormat),
+    };
 
     if let Some(format) = format_opt {
         let mut format_data = format.create(&input);
@@ -155,13 +158,12 @@ fn main() {
                     fs::remove_file(&output_file).unwrap();
                 }
                 souffle_sqlite.dump_to_db(&output_file).unwrap();
-            },
+            }
 
             None => {
                 souffle_sqlite.dump();
             }
         }
-
     } else {
         println!("Unknown format for input.");
         print_formats(&formats);
