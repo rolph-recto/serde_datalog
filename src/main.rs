@@ -145,7 +145,7 @@ fn main() {
     if let Some(format) = format_opt {
         let mut format_data = format.create(&input);
         let mut deserializer = format_data.deserializer();
-        let mut souffle_sqlite = souffle_sqlite::Backend::default();
+        let mut souffle_sqlite = souffle_sqlite::StringKeyBackend::default();
 
         let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
         serde_transcode::transcode(deserializer.as_mut(), &mut extractor).unwrap();
