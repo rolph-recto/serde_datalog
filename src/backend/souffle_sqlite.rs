@@ -1,15 +1,18 @@
 //! A backend that stores facts in a [SQLite](https://sqlite.org) database,
 //! in the format expected by [Souffle](https://souffle-lang.github.io/).
 
-use std::{fmt::Debug, hash::Hash};
 use crate::{backend::vector, DatalogExtractorBackend, ElemId, ElemType, Result};
+use std::{fmt::Debug, hash::Hash};
 
 use super::vector::BackendData;
 
 struct AbstractBackend;
 
 impl AbstractBackend {
-    fn dump_to_db<K: Debug+Eq+Hash>(data: &BackendData<K>, filename: &str) -> rusqlite::Result<rusqlite::Connection> {
+    fn dump_to_db<K: Debug + Eq + Hash>(
+        data: &BackendData<K>,
+        filename: &str,
+    ) -> rusqlite::Result<rusqlite::Connection> {
         let conn = rusqlite::Connection::open(filename)?;
         {
             conn.execute_batch(
