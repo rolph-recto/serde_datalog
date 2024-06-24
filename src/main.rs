@@ -24,9 +24,9 @@ use crate::input_format::InputFormat;
 struct Args {
     #[arg(
         index = 1,
-        help = "(Optional) Input file; if absent, will read from standard input"
+        help = "List of input files; if absent, will read from standard input"
     )]
-    filename: Option<String>,
+    filenames: Vec<String>,
 
     #[arg(
         short = 'f',
@@ -105,27 +105,28 @@ fn main() {
         return;
     }
 
-    let input: String = match &args.filename {
-        Some(filename) => {
+    let input: String =
+        if args.filenames.len() > 0 {
+            let filename = args.filenames.first().unwrap();
             let path = Path::new(filename);
             fs::read_to_string(path).unwrap()
-        }
 
-        None => {
+        } else {
             let mut buf = String::new();
             io::stdin().read_to_string(&mut buf).unwrap();
             buf
-        }
-    };
+        };
 
-    let format_auto: Option<String> = match &args.filename {
-        Some(filename) => Path::new(filename)
+    let format_auto: Option<String> =
+        if args.filenames.len() > 0 {
+            Path::new(args.filenames.first().unwrap())
             .extension()
             .and_then(|ext| ext.to_str())
-            .map(|s| s.to_string()),
+            .map(|s| s.to_string())
 
-        None => None,
-    };
+        } else {
+            None
+        };
 
     let format_opt: Option<&mut dyn InputFormat> = match (&format_auto, &args.format) {
         (None, None) => None,

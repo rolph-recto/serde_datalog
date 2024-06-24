@@ -2,7 +2,7 @@
 //! in the format expected by [Souffle](https://souffle-lang.github.io/).
 
 use crate::{backend::vector, DatalogExtractorBackend, ElemId, ElemType, Result};
-use std::{fmt::Debug, hash::Hash};
+use std::{fmt::Debug, hash::Hash, path::PathBuf};
 
 use super::vector::BackendData;
 
@@ -23,6 +23,17 @@ impl AbstractBackend {
                     symbol TEXT NOT NULL,
                     PRIMARY KEY (id)
                 );
+
+                CREATE TABLE _rootElem (
+                    file INTEGER NOT NULL,
+                    elem INTEGER NOT NULL,
+                    PRIMARY KEY (id)
+                );
+
+                CREATE VIEW rootElem AS
+                SELECT __SymbolTable.symbol AS file, _rootElem.elem as elem
+                FROM _rootElem INNER JOIN __SymbolTable
+                ON _rootElem.file = __SymbolTable.id;
 
                 CREATE TABLE _type (
                     id INTEGER NOT NULL,
@@ -144,6 +155,13 @@ impl AbstractBackend {
 
             for (sym, id) in data.symbol_table.iter() {
                 insert_symbol_table.execute((id.0, sym))?;
+            }
+
+            let mut insert_root_elem_table =
+                conn.prepare("INSERT INTO _rootElem (file, elem) VALUES (?1, ?2);")?;
+
+            for (file, elem) in data.root_elem_table.iter() {
+                insert_root_elem_table.execute((file.0, elem.0))?;
             }
 
             let mut insert_type_table =
@@ -290,6 +308,10 @@ impl Backend {
 }
 
 impl<'a> DatalogExtractorBackend for &'a mut Backend {
+    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+        (&mut self.vector_backend).add_root_elem(file, elem)
+    }
+
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         (&mut self.vector_backend).add_elem(elem, elem_type)
     }
@@ -389,6 +411,10 @@ impl StringKeyBackend {
 }
 
 impl<'a> DatalogExtractorBackend for &'a mut StringKeyBackend {
+    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+        (&mut self.vector_backend).add_root_elem(file, elem)
+    }
+
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         (&mut self.vector_backend).add_elem(elem, elem_type)
     }

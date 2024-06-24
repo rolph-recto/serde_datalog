@@ -3,7 +3,7 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
-    hash::Hash,
+    hash::Hash, path::PathBuf,
 };
 
 use crate::{DatalogExtractionError, DatalogExtractorBackend, ElemId, ElemType, Result};
@@ -35,8 +35,10 @@ const UNIT_VARIANT_NAME: &str = "UnitVariant";
 pub struct BackendData<K: Debug + Eq + Hash> {
     pub symbol_table: HashMap<String, SymbolId>,
 
+    pub root_elem_table: HashMap<SymbolId, ElemId>,
+
     /// Columns: (elem, elem type)
-    pub type_table: Vec<(ElemId, SymbolId)>,
+    pub type_table: HashMap<ElemId, SymbolId>,
 
     /// Stores values of boolean elements.
     /// Columns: (elem, value)
@@ -79,6 +81,7 @@ impl<K: Debug + Eq + Hash> Default for BackendData<K> {
     fn default() -> Self {
         Self {
             symbol_table: Default::default(),
+            root_elem_table: Default::default(),
             type_table: Default::default(),
             bool_table: Default::default(),
             number_table: Default::default(),
@@ -282,6 +285,14 @@ impl<K: Debug + Eq + Hash> AbstractBackend<K> {
         self.data
     }
 
+    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+        let sym = self.intern_string(&file.display().to_string());
+        match self.data.root_elem_table.insert(sym, elem) {
+            Some(_) => Result::Err(DatalogExtractionError::MultipleRootElements(file)),
+            None => Result::Ok(())
+        }
+    }
+
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         let type_name: &str = match elem_type {
             ElemType::Bool => BOOL_NAME,
@@ -316,7 +327,7 @@ impl<K: Debug + Eq + Hash> AbstractBackend<K> {
         };
 
         let elem_type_sym = self.intern_string(type_name);
-        self.data.type_table.push((elem, elem_type_sym));
+        assert!(self.data.type_table.insert(elem, elem_type_sym).is_none());
         Result::Ok(())
     }
 
@@ -416,6 +427,10 @@ impl Backend {
 }
 
 impl DatalogExtractorBackend for &mut Backend {
+    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+        self.parent.add_root_elem(file, elem)
+    }
+
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         self.parent.add_elem(elem, elem_type)
     }
@@ -492,6 +507,10 @@ impl StringKeyBackend {
 }
 
 impl DatalogExtractorBackend for &mut StringKeyBackend {
+    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+        self.parent.add_root_elem(file, elem)
+    }
+
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
         self.parent.add_elem(elem, elem_type)
     }

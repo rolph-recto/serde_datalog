@@ -87,7 +87,7 @@
 use serde::ser;
 use std::{
     fmt::{self, Display},
-    result,
+    result, path::PathBuf,
 };
 
 pub mod backend;
@@ -95,6 +95,7 @@ pub mod backend;
 #[derive(Debug)]
 pub enum DatalogExtractionError {
     UnextractableData,
+    MultipleRootElements(PathBuf),
     Custom(String),
 }
 
@@ -103,6 +104,10 @@ impl Display for DatalogExtractionError {
         match self {
             DatalogExtractionError::UnextractableData => {
                 write!(f, "unextractable data")
+            }
+
+            DatalogExtractionError::MultipleRootElements(path) => {
+                write!(f, "multiple root elements for {:?}", path)
             }
 
             DatalogExtractionError::Custom(msg) => {
@@ -176,6 +181,9 @@ pub enum ElemType {
 /// by [DatalogExtractor]. These facts can be represented in whatever format
 /// the backend chooses, e.g. a SQLite database, a set of vectors, etc.
 pub trait DatalogExtractorBackend {
+    /// Set `elem` as the root element of `file`.
+    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()>;
+
     /// Materialize fact that element with ID `elem` has element type `elem_type`.
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()>;
 
@@ -393,6 +401,7 @@ pub trait DatalogExtractorBackend {
 /// the facts that it generates from a data structure. Instead, it calls out
 /// to a [DatalogExtractorBackend] to materialize facts.
 pub struct DatalogExtractor<'a> {
+    cur_file: Option<PathBuf>,
     cur_elem_id: ElemId,
     elem_stack: Vec<ElemId>,
     parent_stack: Vec<(ElemId, usize)>,
@@ -404,9 +413,15 @@ impl<'a> DatalogExtractor<'a> {
         DatalogExtractor {
             backend: Box::new(backend),
             cur_elem_id: ElemId(1),
+            cur_file: None,
             elem_stack: Vec::new(),
             parent_stack: Vec::new(),
         }
+    }
+
+    pub fn set_file(&mut self, path: PathBuf) -> Result<()> {
+        self.cur_file = Some(path);
+        Result::Ok(())
     }
 
     fn get_fresh_elem_id(&mut self, elem_type: ElemType) -> Result<ElemId> {
@@ -414,6 +429,12 @@ impl<'a> DatalogExtractor<'a> {
         self.backend.add_elem(id, elem_type)?;
         self.elem_stack.push(id);
         self.cur_elem_id.0 += 1;
+
+        if let Some(file) = &self.cur_file {
+            self.backend.add_root_elem(file.clone(), id)?;
+            self.cur_file = None;
+        }
+
         Result::Ok(id)
     }
 

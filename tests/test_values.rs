@@ -114,8 +114,8 @@ mod test {
                 let seq_sym = data.symbol_table.get("Seq").unwrap();
 
                 let (map_count, seq_count) = data.type_table.iter().fold((0, 0), |acc, row| {
-                    let map_inc = if row.1 == *map_sym { 1 } else { 0 };
-                    let seq_inc = if row.1 == *seq_sym { 1 } else { 0 };
+                    let map_inc = if row.1 == map_sym { 1 } else { 0 };
+                    let seq_inc = if row.1 == seq_sym { 1 } else { 0 };
                     (acc.0 + map_inc, acc.1 + seq_inc)
                 });
 
@@ -131,7 +131,8 @@ mod test {
                 Some(data)
             }
 
-            Err(DatalogExtractionError::UnextractableData) => None,
+            Err(DatalogExtractionError::UnextractableData) |
+            Err(DatalogExtractionError::MultipleRootElements(_)) => None,
 
             Err(DatalogExtractionError::Custom(msg)) => {
                 assert!(false, "{}", msg);
