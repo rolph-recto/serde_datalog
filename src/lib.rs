@@ -87,7 +87,7 @@
 use serde::ser;
 use std::{
     fmt::{self, Display},
-    result, path::PathBuf,
+    result
 };
 
 pub mod backend;
@@ -95,7 +95,7 @@ pub mod backend;
 #[derive(Debug)]
 pub enum DatalogExtractionError {
     UnextractableData,
-    MultipleRootElements(PathBuf),
+    MultipleRootElements(String),
     Custom(String),
 }
 
@@ -182,7 +182,7 @@ pub enum ElemType {
 /// the backend chooses, e.g. a SQLite database, a set of vectors, etc.
 pub trait DatalogExtractorBackend {
     /// Set `elem` as the root element of `file`.
-    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()>;
+    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()>;
 
     /// Materialize fact that element with ID `elem` has element type `elem_type`.
     fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()>;
@@ -401,7 +401,7 @@ pub trait DatalogExtractorBackend {
 /// the facts that it generates from a data structure. Instead, it calls out
 /// to a [DatalogExtractorBackend] to materialize facts.
 pub struct DatalogExtractor<'a> {
-    cur_file: Option<PathBuf>,
+    cur_file: Option<String>,
     cur_elem_id: ElemId,
     elem_stack: Vec<ElemId>,
     parent_stack: Vec<(ElemId, usize)>,
@@ -419,8 +419,8 @@ impl<'a> DatalogExtractor<'a> {
         }
     }
 
-    pub fn set_file(&mut self, path: PathBuf) -> Result<()> {
-        self.cur_file = Some(path);
+    pub fn set_file(&mut self, file: &str) -> Result<()> {
+        self.cur_file = Some(file.to_string());
         Result::Ok(())
     }
 
@@ -431,7 +431,7 @@ impl<'a> DatalogExtractor<'a> {
         self.cur_elem_id.0 += 1;
 
         if let Some(file) = &self.cur_file {
-            self.backend.add_root_elem(file.clone(), id)?;
+            self.backend.add_root_elem(file, id)?;
             self.cur_file = None;
         }
 

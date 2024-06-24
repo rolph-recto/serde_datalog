@@ -2,14 +2,14 @@
 //! in the format expected by [Souffle](https://souffle-lang.github.io/).
 
 use crate::{backend::vector, DatalogExtractorBackend, ElemId, ElemType, Result};
-use std::{fmt::Debug, hash::Hash, path::PathBuf};
+use std::{fmt::Display, hash::Hash};
 
 use super::vector::BackendData;
 
 struct AbstractBackend;
 
 impl AbstractBackend {
-    fn dump_to_db<K: Debug + Eq + Hash>(
+    fn dump_to_db<K: Display + Eq + Hash>(
         data: &BackendData<K>,
         filename: &str,
     ) -> rusqlite::Result<rusqlite::Connection> {
@@ -27,7 +27,7 @@ impl AbstractBackend {
                 CREATE TABLE _rootElem (
                     file INTEGER NOT NULL,
                     elem INTEGER NOT NULL,
-                    PRIMARY KEY (id)
+                    PRIMARY KEY (file)
                 );
 
                 CREATE VIEW rootElem AS
@@ -308,7 +308,7 @@ impl Backend {
 }
 
 impl<'a> DatalogExtractorBackend for &'a mut Backend {
-    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
         (&mut self.vector_backend).add_root_elem(file, elem)
     }
 
@@ -411,7 +411,7 @@ impl StringKeyBackend {
 }
 
 impl<'a> DatalogExtractorBackend for &'a mut StringKeyBackend {
-    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
         (&mut self.vector_backend).add_root_elem(file, elem)
     }
 

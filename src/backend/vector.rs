@@ -3,7 +3,7 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
-    hash::Hash, path::PathBuf,
+    hash::Hash
 };
 
 use crate::{DatalogExtractionError, DatalogExtractorBackend, ElemId, ElemType, Result};
@@ -32,7 +32,7 @@ const UNIT_NAME: &str = "Unit";
 const UNIT_STRUCT_NAME: &str = "UnitStruct";
 const UNIT_VARIANT_NAME: &str = "UnitVariant";
 
-pub struct BackendData<K: Debug + Eq + Hash> {
+pub struct BackendData<K: Display + Eq + Hash> {
     pub symbol_table: HashMap<String, SymbolId>,
 
     pub root_elem_table: HashMap<SymbolId, ElemId>,
@@ -77,7 +77,7 @@ pub struct BackendData<K: Debug + Eq + Hash> {
     pub tuple_table: HashMap<(ElemId, usize), ElemId>,
 }
 
-impl<K: Debug + Eq + Hash> Default for BackendData<K> {
+impl<K: Display + Eq + Hash> Default for BackendData<K> {
     fn default() -> Self {
         Self {
             symbol_table: Default::default(),
@@ -96,7 +96,7 @@ impl<K: Debug + Eq + Hash> Default for BackendData<K> {
     }
 }
 
-impl<K: Debug + Eq + Hash> BackendData<K> {
+impl<K: Display + Eq + Hash> BackendData<K> {
     /// Print generated fact tables to standard output.
     pub fn dump(&self) {
         if !self.symbol_table.is_empty() {
@@ -106,6 +106,17 @@ impl<K: Debug + Eq + Hash> BackendData<K> {
             println!("---------------------------------");
             for (str, sym) in self.symbol_table.iter() {
                 println!("{:<15} | {:<15}", str, sym.0);
+            }
+            println!();
+        }
+
+        if !self.root_elem_table.is_empty() {
+            println!("{:^33}", "Root Elem Table");
+            println!("---------------------------------");
+            println!("{:<15} | {:<15}", "File", "Elem Id");
+            println!("---------------------------------");
+            for (file, elem) in self.root_elem_table.iter() {
+                println!("{:<15} | {:<15?}", file.0, elem.0);
             }
             println!();
         }
@@ -160,7 +171,7 @@ impl<K: Debug + Eq + Hash> BackendData<K> {
             println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Key", "Value");
             println!("---------------------------------------------------");
             for ((elem, key), val) in self.map_table.iter() {
-                println!("{:<15} | {:<15?} | {:<15?}", elem.0, key, val.0);
+                println!("{:<15} | {:<15} | {:<15?}", elem.0, key, val.0);
             }
             println!();
         }
@@ -236,12 +247,12 @@ impl<K: Debug + Eq + Hash> BackendData<K> {
 /// floating point values, and will return a
 /// [UnextractableData][DatalogExtractionError::UnextractableData] error if
 /// the input contains such values.
-pub struct AbstractBackend<K: Debug + Eq + Hash> {
+pub struct AbstractBackend<K: Display + Eq + Hash> {
     pub(crate) cur_symbol_id: SymbolId,
     pub(crate) data: BackendData<K>,
 }
 
-impl<K: Debug + Eq + Hash> Default for AbstractBackend<K> {
+impl<K: Display + Eq + Hash> Default for AbstractBackend<K> {
     fn default() -> Self {
         let mut backend = Self {
             cur_symbol_id: SymbolId(1),
@@ -266,7 +277,7 @@ impl<K: Debug + Eq + Hash> Default for AbstractBackend<K> {
     }
 }
 
-impl<K: Debug + Eq + Hash> AbstractBackend<K> {
+impl<K: Display + Eq + Hash> AbstractBackend<K> {
     fn intern_string(&mut self, s: &str) -> SymbolId {
         match self.data.symbol_table.get(s) {
             Some(id) => *id,
@@ -285,10 +296,10 @@ impl<K: Debug + Eq + Hash> AbstractBackend<K> {
         self.data
     }
 
-    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
-        let sym = self.intern_string(&file.display().to_string());
+    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
+        let sym = self.intern_string(file);
         match self.data.root_elem_table.insert(sym, elem) {
-            Some(_) => Result::Err(DatalogExtractionError::MultipleRootElements(file)),
+            Some(_) => Result::Err(DatalogExtractionError::MultipleRootElements(file.to_string())),
             None => Result::Ok(())
         }
     }
@@ -427,7 +438,7 @@ impl Backend {
 }
 
 impl DatalogExtractorBackend for &mut Backend {
-    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
         self.parent.add_root_elem(file, elem)
     }
 
@@ -507,7 +518,7 @@ impl StringKeyBackend {
 }
 
 impl DatalogExtractorBackend for &mut StringKeyBackend {
-    fn add_root_elem(&mut self, file: PathBuf, elem: ElemId) -> Result<()> {
+    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
         self.parent.add_root_elem(file, elem)
     }
 
