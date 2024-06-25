@@ -101,12 +101,9 @@ mod test {
     }
 
     fn extract(value: &Value) -> Option<backend::vector::BackendData<ElemId>> {
-        let mut backend = backend::vector::Backend::default();
-        let mut extractor = DatalogExtractor::new(&mut backend);
+        let mut extractor = DatalogExtractor::new(backend::vector::Backend::default());
         let res = value.serialize(&mut extractor);
-        drop(extractor);
-
-        let data = backend.get_data();
+        let data = extractor.get_backend().get_data();
 
         return match res {
             Ok(_) => {

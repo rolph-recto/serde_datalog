@@ -437,7 +437,7 @@ impl Backend {
     }
 }
 
-impl DatalogExtractorBackend for &mut Backend {
+impl DatalogExtractorBackend for Backend {
     fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
         self.parent.add_root_elem(file, elem)
     }
@@ -517,7 +517,7 @@ impl StringKeyBackend {
     }
 }
 
-impl DatalogExtractorBackend for &mut StringKeyBackend {
+impl DatalogExtractorBackend for StringKeyBackend {
     fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
         self.parent.add_root_elem(file, elem)
     }

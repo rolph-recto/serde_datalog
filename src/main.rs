@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf}, str::FromStr
 };
 
-use serde_datalog::{backend::souffle_sqlite, DatalogExtractor};
+use serde_datalog::{backend, DatalogExtractor, DatalogExtractorBackend};
 
 use crate::input_format::InputFormat;
 
@@ -95,9 +95,9 @@ fn print_formats(formats: &Vec<Box<dyn InputFormat>>) {
     }
 }
 
-fn process_file(
+fn process_file<B: DatalogExtractorBackend>(
     formats: &mut Vec<Box<dyn InputFormat>>,
-    extractor: &mut DatalogExtractor,
+    extractor: &mut DatalogExtractor<B>,
     arg_format: &Option<String>,
     file_opt: Option<String>,
     input: String
@@ -155,8 +155,7 @@ fn main() {
         return;
     }
 
-    let mut souffle_sqlite = souffle_sqlite::StringKeyBackend::default();
-    let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
+    let mut extractor = DatalogExtractor::new(backend::souffle_sqlite::StringKeyBackend::default());
 
     if args.filenames.len() > 0 {
         for filename in args.filenames.iter() {
@@ -172,8 +171,7 @@ fn main() {
         process_file(&mut formats, &mut extractor, &args.format, None, buf).unwrap();
     };
 
-    drop(extractor);
-
+    let souffle_sqlite = extractor.get_backend();
     if let Some(output_file) = args.output {
         let outpath = Path::new(&output_file);
         if outpath.is_file() {

@@ -400,18 +400,18 @@ pub trait DatalogExtractorBackend {
 /// Note that the extractor does *not* contain an explicit representation of
 /// the facts that it generates from a data structure. Instead, it calls out
 /// to a [DatalogExtractorBackend] to materialize facts.
-pub struct DatalogExtractor<'a> {
+pub struct DatalogExtractor<B: DatalogExtractorBackend> {
     cur_file: Option<String>,
     cur_elem_id: ElemId,
     elem_stack: Vec<ElemId>,
     parent_stack: Vec<(ElemId, usize)>,
-    backend: Box<dyn DatalogExtractorBackend + 'a>,
+    backend: B,
 }
 
-impl<'a> DatalogExtractor<'a> {
-    pub fn new<T: 'a + DatalogExtractorBackend>(backend: T) -> Self {
+impl<B: DatalogExtractorBackend> DatalogExtractor<B>{
+    pub fn new(backend: B) -> Self {
         DatalogExtractor {
-            backend: Box::new(backend),
+            backend,
             cur_elem_id: ElemId(1),
             cur_file: None,
             elem_stack: Vec::new(),
@@ -476,9 +476,13 @@ impl<'a> DatalogExtractor<'a> {
         let val_id = self.elem_stack.pop().unwrap();
         self.backend.add_struct_entry(*parent_id, key, val_id)
     }
+
+    pub fn get_backend(self) -> B {
+        self.backend
+    }
 }
 
-impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::Serializer for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -916,7 +920,7 @@ impl<'a, 'b> ser::Serializer for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeSeq for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeSeq for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -940,7 +944,7 @@ impl<'a, 'b> ser::SerializeSeq for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeTuple for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeTuple for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -964,7 +968,7 @@ impl<'a, 'b> ser::SerializeTuple for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeTupleVariant for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeTupleVariant for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -988,7 +992,7 @@ impl<'a, 'b> ser::SerializeTupleVariant for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeTupleStruct for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeTupleStruct for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -1012,7 +1016,7 @@ impl<'a, 'b> ser::SerializeTupleStruct for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeMap for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeMap for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -1045,7 +1049,7 @@ impl<'a, 'b> ser::SerializeMap for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeStruct for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeStruct for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 
@@ -1072,7 +1076,7 @@ impl<'a, 'b> ser::SerializeStruct for &'a mut DatalogExtractor<'b> {
     }
 }
 
-impl<'a, 'b> ser::SerializeStructVariant for &'a mut DatalogExtractor<'b> {
+impl<'a, B: DatalogExtractorBackend> ser::SerializeStructVariant for &'a mut DatalogExtractor<B> {
     type Ok = ();
     type Error = DatalogExtractionError;
 

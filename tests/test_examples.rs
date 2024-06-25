@@ -14,8 +14,8 @@ fn get_example_files(extension: &str) -> Vec<PathBuf> {
 }
 
 fn run_example<T: Serialize>(value: T) {
-    let mut souffle_sqlite = souffle_sqlite::StringKeyBackend::default();
-    let mut extractor = DatalogExtractor::new(&mut souffle_sqlite);
+    let souffle_sqlite = souffle_sqlite::StringKeyBackend::default();
+    let mut extractor = DatalogExtractor::new(souffle_sqlite);
     let res = value.serialize(&mut extractor);
     assert!(res.is_ok());
 }
