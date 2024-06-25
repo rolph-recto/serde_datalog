@@ -13,7 +13,7 @@ arbitrary = { version = "1.3.2", optional = true }
 arbitrary-json = { version = "0.1.1", optional = true }
 clap = { version = "4.4.13", features = ["derive"], optional = true }
 erased-serde = { version = "0.4.2", optional = true }
-rand = { version = "0.8.5" }
+rand = { version = "0.8.5", optional = true }
 ron = { version = "0.8.1", optional = true }
 rusqlite = "0.30.0"
 serde = { version = "1.0.194" } 
@@ -26,10 +26,10 @@ serde_yaml = { version = "0.9.30", optional = true }
 default = ["json"]
 
 # dependencies only needed by the serde_datalog binary 
-bin_only = ["clap", "erased-serde", "serde-transcode"]
+bin_only = ["dep:clap", "dep:erased-serde", "dep:serde-transcode"]
 
 # support for converting JSON files with the serde_datalog binary 
-json = ["dep:serde_json", "dep:arbitrary", "dep:arbitrary-json"]
+json = ["dep:serde_json", "dep:arbitrary", "dep:rand", "dep:arbitrary-json"]
 
 # support for converting RON files with the serde_datalog binary 
 ron = ["dep:ron"]
