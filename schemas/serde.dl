@@ -6,6 +6,7 @@
 .type TypeName <: symbol
 .type VariantName <: symbol
 
+.decl rootElem(file: symbol, elem: ElemId)
 .decl type(id: ElemId, type: ElemType)
 .decl bool(id: ElemId, value: number)
 .decl number(id: ElemId, value: number)
@@ -16,14 +17,3 @@
 .decl tuple(id: ElemId, pos: number, value: ElemId)
 .decl structType(id: ElemId, type: TypeName)
 .decl variantType(id: ElemId, type: TypeName, variant: VariantName)
-
-// Property that holds when `id` is the root element of a data structure;
-// that is, the element is not referenced by any other element.
-.decl rootElem(id: ElemId)
-rootElem(id) :-
-    type(id, _),
-    !map(_, id, _),
-    !map(_, _, id),
-    !struct(_, _, id),
-    !seq(_, _, id),
-    !tuple(_, _, id).

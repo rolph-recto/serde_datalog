@@ -9,7 +9,7 @@
 
 .decl boroPopulation(boro: ElemId, population: number)
 boroPopulation(boro, population) :-
-    rootElem(root),
+    rootElem(_, root),
     map(root, "boroughs", boroList),
     seq(boroList, _, boro),
     map(boro, "population", popId),

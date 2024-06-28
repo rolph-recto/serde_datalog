@@ -9,7 +9,7 @@
 
 .decl depVersion(dep: symbol, version: symbol)
 depVersion(dep, version) :-
-    rootElem(root),
+    rootElem(_, root),
     map(root, "dependencies", deps),
     map(deps, dep, depRecord),
     map(depRecord, "version", versionId),

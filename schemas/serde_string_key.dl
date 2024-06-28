@@ -6,6 +6,7 @@
 .type TypeName <: symbol
 .type VariantName <: symbol
 
+.decl rootElem(file: symbol, elem: ElemId)
 .decl type(id: ElemId, type: ElemType)
 .decl bool(id: ElemId, value: number)
 .decl number(id: ElemId, value: number)
