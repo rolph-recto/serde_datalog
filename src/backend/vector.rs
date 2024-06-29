@@ -104,7 +104,9 @@ impl<K: Display + Eq + Hash> Default for BackendData<K> {
 impl<K: Eq + Hash> BackendData<K> {
     /// Print generated fact tables to standard output.
     pub fn dump_with_fn<'a, S: Display>(&'a self, map_key_fn: impl Fn(&'a Self, &'a K) -> S)
-    where K: 'a, S: 'a
+    where
+        K: 'a,
+        S: 'a,
     {
         if !self.symbol_table.is_empty() {
             println!("{:^33}", "Symbol Table");
@@ -178,7 +180,12 @@ impl<K: Eq + Hash> BackendData<K> {
             println!("{:<15} | {:<15} | {:<15}", "Elem Id", "Key", "Value");
             println!("---------------------------------------------------");
             for ((elem, key), val) in self.map_table.iter() {
-                println!("{:<15} | {:<15} | {:<15}", elem.0, map_key_fn(self, key), val.0);
+                println!(
+                    "{:<15} | {:<15} | {:<15}",
+                    elem.0,
+                    map_key_fn(self, key),
+                    val.0
+                );
             }
             println!();
         }
@@ -254,7 +261,10 @@ impl<K: Eq + Hash> BackendData<K> {
 
     /// dump function that does not require a printing function for map keys;
     /// this can only be called when map key type `K` implements [Display].
-    pub fn dump(&self) where K: Display {
+    pub fn dump(&self)
+    where
+        K: Display,
+    {
         self.dump_with_fn(|_, key| key)
     }
 }
@@ -344,11 +354,15 @@ impl<K: Display + Eq + Hash> AbstractBackend<K> {
             ElemType::Char | ElemType::Str => STR_NAME,
 
             ElemType::F32 | ElemType::F64 => {
-                return Result::Err(DatalogExtractionError::UnextractableData("float".to_string()));
+                return Result::Err(DatalogExtractionError::UnextractableData(
+                    "float".to_string(),
+                ));
             }
 
             ElemType::Bytes => {
-                return Result::Err(DatalogExtractionError::UnextractableData("byte array".to_string()));
+                return Result::Err(DatalogExtractionError::UnextractableData(
+                    "byte array".to_string(),
+                ));
             }
 
             ElemType::Map => MAP_NAME,
@@ -380,10 +394,7 @@ impl<K: Display + Eq + Hash> AbstractBackend<K> {
     fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {
         match i64::try_from(value) {
             Ok(signed_value) => {
-                Self::process_prev_value(
-                    elem,
-                    self.data.number_table.insert(elem, signed_value)
-                )
+                Self::process_prev_value(elem, self.data.number_table.insert(elem, signed_value))
             }
 
             Err(_) => Result::Err(DatalogExtractionError::IntegerCastOverflow(value)),
@@ -497,9 +508,9 @@ impl StringKeyBackend {
 
     /// Print generate fact tables to standard output.
     pub fn dump(self) {
-        self.parent.get_data().dump_with_fn(|data, key| {
-            data.symbol_table.get_by_right(key).unwrap()
-        })
+        self.parent
+            .get_data()
+            .dump_with_fn(|data, key| data.symbol_table.get_by_right(key).unwrap())
     }
 }
 
@@ -527,7 +538,9 @@ impl DatalogExtractorBackend for StringKeyBackend {
                 self.parent.data.map_table.insert((elem, sym), value),
             )
         } else {
-            Result::Err(DatalogExtractionError::UnextractableData("non-string map key".to_string()))
+            Result::Err(DatalogExtractionError::UnextractableData(
+                "non-string map key".to_string(),
+            ))
         }
     }
 }

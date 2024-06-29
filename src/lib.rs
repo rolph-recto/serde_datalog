@@ -208,7 +208,9 @@ pub trait DatalogExtractorBackend {
 
     /// Materialize fact that element with ID `elem` is a boolean with value `value`.
     fn add_bool(&mut self, _elem: ElemId, _value: bool) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("bool".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "bool".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is an i8 with value `value`.
@@ -302,7 +304,9 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("bytes".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "bytes".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is a map with
@@ -311,7 +315,9 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_map_entry(&mut self, _elem: ElemId, _key: ElemId, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("map entry".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "map entry".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is a struct
@@ -322,7 +328,9 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_struct_type(&mut self, _elem: ElemId, _struct_name: &str) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("struct type".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "struct type".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is a struct,
@@ -333,7 +341,9 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_struct_entry(&mut self, _elem: ElemId, _key: &str, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("struct entry".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "struct entry".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is a sequence
@@ -342,7 +352,9 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_seq_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("seq entry".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "seq entry".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is an enum variant
@@ -359,7 +371,9 @@ pub trait DatalogExtractorBackend {
         _type_name: &str,
         _variant_name: &str,
     ) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("variant type".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "variant type".to_string(),
+        ))
     }
 
     /// Materialize fact that element with ID `elem` is a tuple with value
@@ -371,7 +385,9 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_tuple_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData("tuple entry".to_string()))
+        Result::Err(DatalogExtractionError::UnextractableData(
+            "tuple entry".to_string(),
+        ))
     }
 }
 

@@ -147,11 +147,12 @@ fn process_file<B: DatalogExtractorBackend>(
 
 fn process_files<B: backend::souffle_sqlite::AbstractBackend>(
     mut formats: Vec<Box<dyn InputFormat>>,
-    mut extractor: DatalogExtractor<B>,
+    backend: B,
     filenames: &Vec<String>,
     format: &Option<String>,
     output: &Option<String>,
 ) {
+    let mut extractor: DatalogExtractor<B> = DatalogExtractor::new(backend);
     if filenames.len() > 0 {
         for filename in filenames.iter() {
             let path = Path::new(filename);
@@ -185,12 +186,9 @@ fn process_files<B: backend::souffle_sqlite::AbstractBackend>(
             souffle_sqlite.dump_to_db(output_file).unwrap();
         }
 
-        None => {
-            souffle_sqlite.dump()
-        }
+        None => souffle_sqlite.dump(),
     }
 }
-
 
 fn main() {
     let args = Args::parse();
@@ -201,17 +199,23 @@ fn main() {
         return;
     }
 
-    let all_string_keys =
-        formats
-        .iter()
-        .all(|format| format.has_string_keys());
+    let all_string_keys = formats.iter().all(|format| format.has_string_keys());
 
     if all_string_keys {
-        let extractor = DatalogExtractor::new(backend::souffle_sqlite::StringKeyBackend::default());
-        process_files(formats, extractor, &args.filenames, &args.format, &args.output);
-
+        process_files(
+            formats,
+            backend::souffle_sqlite::StringKeyBackend::default(),
+            &args.filenames,
+            &args.format,
+            &args.output,
+        );
     } else {
-        let extractor = DatalogExtractor::new(backend::souffle_sqlite::Backend::default());
-        process_files(formats, extractor, &args.filenames, &args.format, &args.output);
+        process_files(
+            formats,
+            backend::souffle_sqlite::Backend::default(),
+            &args.filenames,
+            &args.format,
+            &args.output,
+        );
     }
 }
