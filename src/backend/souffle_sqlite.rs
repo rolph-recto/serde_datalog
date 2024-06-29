@@ -6,7 +6,7 @@ use std::{fmt::Display, hash::Hash};
 
 use crate::{
     backend::vector::{self, BackendData},
-    DatalogExtractorBackend, ElemId, ElemType, Result
+    DatalogExtractorBackend, ElemId, ElemType, Result,
 };
 
 struct AbstractBackend;
@@ -329,6 +329,22 @@ impl DatalogExtractorBackend for Backend {
     }
 }
 
+/// DatalogExtractorBackend impl similar to [Backend], except this impl assumes
+/// map keys are always strings.
+///
+/// The backend stores facts in the following Souffle schema:
+///
+/// ```text
+/// .decl type(id: ElemId, type: ElemType)
+/// .decl number(id: ElemId, value: number)
+/// .decl string(id: ElemId, value: symbol)
+/// .decl map(id: ElemId, key: symbol, value: ElemId)
+/// .decl struct(id: ElemId, field: Field, value: ElemId)
+/// .decl seq(id: ElemId, pos: number, value: ElemId)
+/// .decl tuple(id: ElemId, pos: number, value: ElemId)
+/// .decl structType(id: ElemId, type: TypeName)
+/// .decl variantType(id: ElemId, type: TypeName, variant: VariantName)
+/// ```
 #[derive(Default)]
 pub struct StringKeyBackend {
     vector_backend: vector::StringKeyBackend,

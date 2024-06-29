@@ -87,15 +87,23 @@
 use serde::ser;
 use std::{
     fmt::{self, Display},
-    result
+    result,
 };
 
 pub mod backend;
 
+/// Error encountered during extraction.
 #[derive(Debug)]
 pub enum DatalogExtractionError {
+    /// Attempted to process unextractable data
     UnextractableData,
-    MultipleRootElements(String),
+
+    /// File has a non-unique root element
+    NonuniqueRootElement(String),
+
+    /// Element has a non-unique identifier
+    NonuniqueIdentifier(ElemId),
+
     Custom(String),
 }
 
@@ -106,8 +114,12 @@ impl Display for DatalogExtractionError {
                 write!(f, "unextractable data")
             }
 
-            DatalogExtractionError::MultipleRootElements(path) => {
-                write!(f, "multiple root elements for {:?}", path)
+            DatalogExtractionError::NonuniqueRootElement(file) => {
+                write!(f, "multiple root elements for {:?}", file)
+            }
+
+            DatalogExtractionError::NonuniqueIdentifier(elem) => {
+                write!(f, "multiple elements associated with identifier {:?}", elem)
             }
 
             DatalogExtractionError::Custom(msg) => {
@@ -408,7 +420,7 @@ pub struct DatalogExtractor<B: DatalogExtractorBackend> {
     backend: B,
 }
 
-impl<B: DatalogExtractorBackend> DatalogExtractor<B>{
+impl<B: DatalogExtractorBackend> DatalogExtractor<B> {
     pub fn new(backend: B) -> Self {
         DatalogExtractor {
             backend,

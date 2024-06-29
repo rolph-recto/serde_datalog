@@ -8,7 +8,8 @@ use clap::Parser;
 use std::{
     fs,
     io::{self, Read},
-    path::{Path, PathBuf}, str::FromStr
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use serde_datalog::{backend, DatalogExtractor, DatalogExtractorBackend};
@@ -100,15 +101,14 @@ fn process_file<B: DatalogExtractorBackend>(
     extractor: &mut DatalogExtractor<B>,
     arg_format: &Option<String>,
     file_opt: Option<String>,
-    input: String
+    input: String,
 ) -> Result<(), String> {
-    let format_auto: Option<String> =
-        file_opt.as_ref().and_then(|file| {
-            Path::new(&file)
+    let format_auto: Option<String> = file_opt.as_ref().and_then(|file| {
+        Path::new(&file)
             .extension()
             .and_then(|ext| ext.to_str())
             .map(|s| s.to_string())
-        });
+    });
 
     let format_opt: Option<&dyn InputFormat> = match (&format_auto, &arg_format) {
         (None, None) => None,
@@ -121,25 +121,25 @@ fn process_file<B: DatalogExtractorBackend>(
 
         (Some(ext), None) => formats
             .iter()
-            .find(|fmt| {
-                fmt.file_extensions().iter()
-                .any(|fmt_ext| fmt_ext == ext)
-            })
+            .find(|fmt| fmt.file_extensions().iter().any(|fmt_ext| fmt_ext == ext))
             .map(|fmt| fmt.as_ref() as &dyn InputFormat),
     };
 
     if let Some(format) = format_opt {
         let mut format_data = format.create(&input);
         let mut deserializer = format_data.deserializer();
-        let path: String =
-            match &file_opt {
-                Some(file) => PathBuf::from_str(file).unwrap().canonicalize().unwrap().display().to_string(),
-                None => "stdin".to_string(),
-            };
+        let path: String = match &file_opt {
+            Some(file) => PathBuf::from_str(file)
+                .unwrap()
+                .canonicalize()
+                .unwrap()
+                .display()
+                .to_string(),
+            None => "stdin".to_string(),
+        };
         extractor.set_file(&path).unwrap();
         serde_transcode::transcode(deserializer.as_mut(), extractor).unwrap();
         Result::Ok(())
-
     } else {
         Result::Err("Unknown format for input.".to_string())
     }
@@ -161,9 +161,15 @@ fn main() {
         for filename in args.filenames.iter() {
             let path = Path::new(filename);
             let buf = fs::read_to_string(path).unwrap();
-            process_file(&mut formats, &mut extractor, &args.format, Some(filename.to_string()), buf).unwrap();
+            process_file(
+                &mut formats,
+                &mut extractor,
+                &args.format,
+                Some(filename.to_string()),
+                buf,
+            )
+            .unwrap();
         }
-
     } else {
         let mut buf = String::new();
         io::stdin().read_to_string(&mut buf).unwrap();
@@ -178,8 +184,7 @@ fn main() {
             fs::remove_file(&output_file).unwrap();
         }
         souffle_sqlite.dump_to_db(&output_file).unwrap();
-
-    } else  {
+    } else {
         souffle_sqlite.dump();
     }
 }
