@@ -1,10 +1,13 @@
 //! A backend that stores facts in a [SQLite](https://sqlite.org) database,
 //! in the format expected by [Souffle](https://souffle-lang.github.io/).
 
-use crate::{backend::vector, DatalogExtractorBackend, ElemId, ElemType, Result};
+use delegate::delegate;
 use std::{fmt::Display, hash::Hash};
 
-use super::vector::BackendData;
+use crate::{
+    backend::vector::{self, BackendData},
+    DatalogExtractorBackend, ElemId, ElemType, Result
+};
 
 struct AbstractBackend;
 
@@ -308,57 +311,21 @@ impl Backend {
 }
 
 impl DatalogExtractorBackend for Backend {
-    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_root_elem(file, elem)
-    }
-
-    fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
-        (&mut self.vector_backend).add_elem(elem, elem_type)
-    }
-
-    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()> {
-        (&mut self.vector_backend).add_bool(elem, value)
-    }
-
-    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()> {
-        (&mut self.vector_backend).add_i64(elem, value)
-    }
-
-    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {
-        (&mut self.vector_backend).add_u64(elem, value)
-    }
-
-    fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()> {
-        (&mut self.vector_backend).add_str(elem, value)
-    }
-
-    fn add_map_entry(&mut self, elem: ElemId, key: ElemId, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_map_entry(elem, key, value)
-    }
-
-    fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()> {
-        (&mut self.vector_backend).add_struct_type(elem, struct_name)
-    }
-
-    fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_struct_entry(elem, key, value)
-    }
-
-    fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_seq_entry(elem, pos, value)
-    }
-
-    fn add_variant_type(
-        &mut self,
-        elem: ElemId,
-        type_name: &str,
-        variant_name: &str,
-    ) -> Result<()> {
-        (&mut self.vector_backend).add_variant_type(elem, type_name, variant_name)
-    }
-
-    fn add_tuple_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_tuple_entry(elem, pos, value)
+    delegate! {
+        to (&mut self.vector_backend) {
+            fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()>;
+            fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()>;
+            fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()>;
+            fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()>;
+            fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()>;
+            fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()>;
+            fn add_map_entry(&mut self, elem: ElemId, key: ElemId, value: ElemId) -> Result<()>;
+            fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()>;
+            fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()>;
+            fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
+            fn add_variant_type(&mut self, elem: ElemId, type_name: &str, variant_name: &str) -> Result<()>;
+            fn add_tuple_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
+        }
     }
 }
 
@@ -411,56 +378,20 @@ impl StringKeyBackend {
 }
 
 impl DatalogExtractorBackend for StringKeyBackend {
-    fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_root_elem(file, elem)
-    }
-
-    fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()> {
-        (&mut self.vector_backend).add_elem(elem, elem_type)
-    }
-
-    fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()> {
-        (&mut self.vector_backend).add_bool(elem, value)
-    }
-
-    fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()> {
-        (&mut self.vector_backend).add_i64(elem, value)
-    }
-
-    fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {
-        (&mut self.vector_backend).add_u64(elem, value)
-    }
-
-    fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()> {
-        (&mut self.vector_backend).add_str(elem, value)
-    }
-
-    fn add_map_entry(&mut self, elem: ElemId, key: ElemId, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_map_entry(elem, key, value)
-    }
-
-    fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()> {
-        (&mut self.vector_backend).add_struct_type(elem, struct_name)
-    }
-
-    fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_struct_entry(elem, key, value)
-    }
-
-    fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_seq_entry(elem, pos, value)
-    }
-
-    fn add_variant_type(
-        &mut self,
-        elem: ElemId,
-        type_name: &str,
-        variant_name: &str,
-    ) -> Result<()> {
-        (&mut self.vector_backend).add_variant_type(elem, type_name, variant_name)
-    }
-
-    fn add_tuple_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()> {
-        (&mut self.vector_backend).add_tuple_entry(elem, pos, value)
+    delegate! {
+        to (&mut self.vector_backend) {
+            fn add_root_elem(&mut self, file: &str, elem: ElemId) -> Result<()>;
+            fn add_elem(&mut self, elem: ElemId, elem_type: ElemType) -> Result<()>;
+            fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()>;
+            fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()>;
+            fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()>;
+            fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()>;
+            fn add_map_entry(&mut self, elem: ElemId, key: ElemId, value: ElemId) -> Result<()>;
+            fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()>;
+            fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()>;
+            fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
+            fn add_variant_type(&mut self, elem: ElemId, type_name: &str, variant_name: &str) -> Result<()>;
+            fn add_tuple_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
+        }
     }
 }
