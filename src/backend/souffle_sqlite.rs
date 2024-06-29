@@ -272,7 +272,7 @@ pub struct Backend {
 impl Backend {
     /// Print generate fact tables to standard output.
     pub fn dump(self) {
-        self.vector_backend.get_data().dump()
+        self.vector_backend.dump()
     }
 
     /// Store facts in a SQLite file with name `filename`.
@@ -353,7 +353,7 @@ pub struct StringKeyBackend {
 impl StringKeyBackend {
     /// Print generate fact tables to standard output.
     pub fn dump(self) {
-        self.vector_backend.get_data().dump()
+        self.vector_backend.dump()
     }
 
     /// Store facts in a SQLite file with name `filename`.

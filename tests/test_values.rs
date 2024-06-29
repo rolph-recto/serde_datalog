@@ -107,8 +107,8 @@ mod test {
 
         return match res {
             Ok(_) => {
-                let map_sym = data.symbol_table.get("Map").unwrap();
-                let seq_sym = data.symbol_table.get("Seq").unwrap();
+                let map_sym = data.symbol_table.get_by_left("Map").unwrap();
+                let seq_sym = data.symbol_table.get_by_left("Seq").unwrap();
 
                 let (map_count, seq_count) = data.type_table.iter().fold((0, 0), |acc, row| {
                     let map_inc = if row.1 == map_sym { 1 } else { 0 };
