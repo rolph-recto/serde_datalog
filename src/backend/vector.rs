@@ -103,7 +103,7 @@ impl<K: Display + Eq + Hash> Default for BackendData<K> {
 
 impl<K: Eq + Hash> BackendData<K> {
     /// Print generated fact tables to standard output.
-    pub fn dump<'a, S: Display>(&'a self, map_key_fn: impl Fn(&'a Self, &'a K) -> S)
+    pub fn dump_with_fn<'a, S: Display>(&'a self, map_key_fn: impl Fn(&'a Self, &'a K) -> S)
     where K: 'a, S: 'a
     {
         if !self.symbol_table.is_empty() {
@@ -250,6 +250,12 @@ impl<K: Eq + Hash> BackendData<K> {
             }
             println!();
         }
+    }
+
+    /// dump function that does not require a printing function for map keys;
+    /// this can only be called when map key type `K` implements [Display].
+    pub fn dump(&self) where K: Display {
+        self.dump_with_fn(|_, key| key)
     }
 }
 
@@ -442,7 +448,7 @@ impl Backend {
 
     /// Print generate fact tables to standard output.
     pub fn dump(self) {
-        self.parent.get_data().dump(|_, key| key.0.to_string())
+        self.parent.get_data().dump()
     }
 }
 
@@ -491,7 +497,7 @@ impl StringKeyBackend {
 
     /// Print generate fact tables to standard output.
     pub fn dump(self) {
-        self.parent.get_data().dump(|data, key| {
+        self.parent.get_data().dump_with_fn(|data, key| {
             data.symbol_table.get_by_right(key).unwrap()
         })
     }
