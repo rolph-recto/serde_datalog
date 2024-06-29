@@ -9,9 +9,17 @@ use crate::{
     DatalogExtractorBackend, ElemId, ElemType, Result,
 };
 
-struct AbstractBackend;
+pub trait AbstractBackend: DatalogExtractorBackend {
+    /// Print generated table facts to stdout.
+    fn dump(self);
 
-impl AbstractBackend {
+    /// Store facts in a SQLite file with name `filename`.
+    fn dump_to_db(self, filename: &str) -> rusqlite::Result<()>;
+}
+
+struct BackendUtil;
+
+impl BackendUtil {
     fn dump_to_db<K: Display + Eq + Hash>(
         data: &BackendData<K>,
         filename: &str,
@@ -269,16 +277,16 @@ pub struct Backend {
     vector_backend: vector::Backend,
 }
 
-impl Backend {
+impl AbstractBackend for Backend {
     /// Print generate fact tables to standard output.
-    pub fn dump(self) {
+    fn dump(self) {
         self.vector_backend.dump()
     }
 
     /// Store facts in a SQLite file with name `filename`.
-    pub fn dump_to_db(self, filename: &str) -> rusqlite::Result<()> {
+    fn dump_to_db(self, filename: &str) -> rusqlite::Result<()> {
         let data = self.vector_backend.get_data();
-        let conn = AbstractBackend::dump_to_db(&data, filename)?;
+        let conn = BackendUtil::dump_to_db(&data, filename)?;
 
         conn.execute_batch(
             "BEGIN;
@@ -350,16 +358,16 @@ pub struct StringKeyBackend {
     vector_backend: vector::StringKeyBackend,
 }
 
-impl StringKeyBackend {
+impl AbstractBackend for StringKeyBackend {
     /// Print generate fact tables to standard output.
-    pub fn dump(self) {
+    fn dump(self) {
         self.vector_backend.dump()
     }
 
     /// Store facts in a SQLite file with name `filename`.
-    pub fn dump_to_db(self, filename: &str) -> rusqlite::Result<()> {
+    fn dump_to_db(self, filename: &str) -> rusqlite::Result<()> {
         let data = self.vector_backend.get_data();
-        let conn = AbstractBackend::dump_to_db(&data, filename)?;
+        let conn = BackendUtil::dump_to_db(&data, filename)?;
 
         conn.execute_batch(
             "BEGIN;

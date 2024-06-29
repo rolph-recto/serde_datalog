@@ -15,6 +15,10 @@ impl InputFormat for InputFormatTOML {
     fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input> {
         Box::new(InputFormatDataTOML { contents })
     }
+
+    fn has_string_keys(&self) -> bool {
+        true
+    }
 }
 
 pub struct InputFormatDataTOML<'a> {

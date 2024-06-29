@@ -17,6 +17,10 @@ impl InputFormat for InputFormatRON {
             deserializer: ron::Deserializer::from_str(contents).unwrap(),
         })
     }
+
+    fn has_string_keys(&self) -> bool {
+        false
+    }
 }
 
 pub struct InputFormatDataRON<'input> {

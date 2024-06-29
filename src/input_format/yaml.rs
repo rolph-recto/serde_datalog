@@ -15,6 +15,10 @@ impl InputFormat for InputFormatYAML {
     fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input> {
         Box::new(InputFormatDataYAML { contents })
     }
+
+    fn has_string_keys(&self) -> bool {
+        false
+    }
 }
 
 pub struct InputFormatDataYAML<'input> {

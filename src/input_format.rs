@@ -14,6 +14,9 @@ pub trait InputFormat {
 
     /// Create an [InputFormatData] instance from the contents of an input file.
     fn create<'input>(&self, contents: &'input str) -> Box<dyn InputFormatData<'input> + 'input>;
+
+    /// Are all of the map keys in this format strings?
+    fn has_string_keys(&self) -> bool;
 }
 
 /// Data that is used to create a [serde::Deserializer] from the contents

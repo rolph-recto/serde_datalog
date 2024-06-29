@@ -374,7 +374,7 @@ impl<K: Display + Eq + Hash> AbstractBackend<K> {
     }
 
     fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()> {
-        Self::process_prev_value(elem, self.data.number_table.insert(elem, value as i64))
+        Self::process_prev_value(elem, self.data.number_table.insert(elem, value))
     }
 
     fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {

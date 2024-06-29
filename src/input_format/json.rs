@@ -18,6 +18,10 @@ impl InputFormat for InputFormatJSON {
             deserializer: serde_json::Deserializer::from_str(contents),
         })
     }
+
+    fn has_string_keys(&self) -> bool {
+        true
+    }
 }
 
 struct InputFormatJSONData<'input> {

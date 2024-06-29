@@ -145,26 +145,21 @@ fn process_file<B: DatalogExtractorBackend>(
     }
 }
 
-fn main() {
-    let args = Args::parse();
-
-    let mut formats: Vec<Box<dyn InputFormat>> = get_input_formats();
-
-    if args.list_formats {
-        print_formats(&formats);
-        return;
-    }
-
-    let mut extractor = DatalogExtractor::new(backend::souffle_sqlite::StringKeyBackend::default());
-
-    if args.filenames.len() > 0 {
-        for filename in args.filenames.iter() {
+fn process_files<B: backend::souffle_sqlite::AbstractBackend>(
+    mut formats: Vec<Box<dyn InputFormat>>,
+    mut extractor: DatalogExtractor<B>,
+    filenames: &Vec<String>,
+    format: &Option<String>,
+    output: &Option<String>,
+) {
+    if filenames.len() > 0 {
+        for filename in filenames.iter() {
             let path = Path::new(filename);
             let buf = fs::read_to_string(path).unwrap();
             process_file(
                 &mut formats,
                 &mut extractor,
-                &args.format,
+                format,
                 Some(filename.to_string()),
                 buf,
             )
@@ -174,17 +169,49 @@ fn main() {
         let mut buf = String::new();
         io::stdin().read_to_string(&mut buf).unwrap();
 
-        process_file(&mut formats, &mut extractor, &args.format, None, buf).unwrap();
+        process_file(&mut formats, &mut extractor, format, None, buf).unwrap();
     };
 
-    let souffle_sqlite = extractor.get_backend();
-    if let Some(output_file) = args.output {
+    if let Some(output_file) = output {
         let outpath = Path::new(&output_file);
         if outpath.is_file() {
-            fs::remove_file(&output_file).unwrap();
+            fs::remove_file(output_file).unwrap();
         }
-        souffle_sqlite.dump_to_db(&output_file).unwrap();
+    }
+
+    let souffle_sqlite = extractor.get_backend();
+    match output {
+        Some(output_file) => {
+            souffle_sqlite.dump_to_db(output_file).unwrap();
+        }
+
+        None => {
+            souffle_sqlite.dump()
+        }
+    }
+}
+
+
+fn main() {
+    let args = Args::parse();
+    let formats: Vec<Box<dyn InputFormat>> = get_input_formats();
+
+    if args.list_formats {
+        print_formats(&formats);
+        return;
+    }
+
+    let all_string_keys =
+        formats
+        .iter()
+        .all(|format| format.has_string_keys());
+
+    if all_string_keys {
+        let extractor = DatalogExtractor::new(backend::souffle_sqlite::StringKeyBackend::default());
+        process_files(formats, extractor, &args.filenames, &args.format, &args.output);
+
     } else {
-        souffle_sqlite.dump();
+        let extractor = DatalogExtractor::new(backend::souffle_sqlite::Backend::default());
+        process_files(formats, extractor, &args.filenames, &args.format, &args.output);
     }
 }
