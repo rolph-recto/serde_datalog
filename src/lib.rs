@@ -96,7 +96,7 @@ pub mod backend;
 #[derive(Debug)]
 pub enum DatalogExtractionError {
     /// Attempted to process unextractable data
-    UnextractableData,
+    UnextractableData(String),
 
     /// File has a non-unique root element
     NonuniqueRootElement(String),
@@ -104,22 +104,29 @@ pub enum DatalogExtractionError {
     /// Element has a non-unique identifier
     NonuniqueIdentifier(ElemId),
 
+    /// Unsigned int could not be coerced into a signed int
+    IntegerCastOverflow(u64),
+
     Custom(String),
 }
 
 impl Display for DatalogExtractionError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DatalogExtractionError::UnextractableData => {
-                write!(f, "unextractable data")
+            DatalogExtractionError::UnextractableData(data) => {
+                write!(f, "unextractable data {}", data)
             }
 
             DatalogExtractionError::NonuniqueRootElement(file) => {
-                write!(f, "multiple root elements for {:?}", file)
+                write!(f, "multiple root elements for {}", file)
             }
 
             DatalogExtractionError::NonuniqueIdentifier(elem) => {
-                write!(f, "multiple elements associated with identifier {:?}", elem)
+                write!(f, "multiple elements associated with identifier {}", elem)
+            }
+
+            DatalogExtractionError::IntegerCastOverflow(value) => {
+                write!(f, "could not coerce unsigned int {} to signed int", value)
             }
 
             DatalogExtractionError::Custom(msg) => {
@@ -201,7 +208,7 @@ pub trait DatalogExtractorBackend {
 
     /// Materialize fact that element with ID `elem` is a boolean with value `value`.
     fn add_bool(&mut self, _elem: ElemId, _value: bool) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("bool".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is an i8 with value `value`.
@@ -228,7 +235,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_i64(&mut self, _elem: ElemId, _value: i64) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("i64".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is an u8 with value `value`.
@@ -257,7 +264,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_u64(&mut self, _elem: ElemId, _value: u64) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("u64".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a f32 with value `value`.
@@ -272,7 +279,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("f64".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a char with value `value`.
@@ -287,7 +294,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_str(&mut self, _elem: ElemId, _value: &str) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("str".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a byte array with value `value`.
@@ -295,7 +302,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("bytes".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a map with
@@ -304,7 +311,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_map_entry(&mut self, _elem: ElemId, _key: ElemId, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("map entry".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a struct
@@ -315,7 +322,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_struct_type(&mut self, _elem: ElemId, _struct_name: &str) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("struct type".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a struct,
@@ -326,7 +333,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_struct_entry(&mut self, _elem: ElemId, _key: &str, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("struct entry".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a sequence
@@ -335,7 +342,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_seq_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("seq entry".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is an enum variant
@@ -352,7 +359,7 @@ pub trait DatalogExtractorBackend {
         _type_name: &str,
         _variant_name: &str,
     ) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("variant type".to_string()))
     }
 
     /// Materialize fact that element with ID `elem` is a tuple with value
@@ -364,7 +371,7 @@ pub trait DatalogExtractorBackend {
     /// The default implementation returns an
     /// [UnextractableData][DatalogExtractionError::UnextractableData] error.
     fn add_tuple_entry(&mut self, _elem: ElemId, _pos: usize, _value: ElemId) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+        Result::Err(DatalogExtractionError::UnextractableData("tuple entry".to_string()))
     }
 }
 

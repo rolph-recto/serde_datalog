@@ -51,7 +51,7 @@ pub struct BackendData<K: Eq + Hash> {
 
     /// Stores values of number elements.
     /// Columns: (elem, value)
-    pub number_table: HashMap<ElemId, isize>,
+    pub number_table: HashMap<ElemId, i64>,
 
     /// Stores values of string elements.
     /// Columns: (elem, symbol)
@@ -343,8 +343,12 @@ impl<K: Display + Eq + Hash> AbstractBackend<K> {
 
             ElemType::Char | ElemType::Str => STR_NAME,
 
-            ElemType::F32 | ElemType::F64 | ElemType::Bytes => {
-                return Result::Err(DatalogExtractionError::UnextractableData);
+            ElemType::F32 | ElemType::F64 => {
+                return Result::Err(DatalogExtractionError::UnextractableData("float".to_string()));
+            }
+
+            ElemType::Bytes => {
+                return Result::Err(DatalogExtractionError::UnextractableData("byte array".to_string()));
             }
 
             ElemType::Map => MAP_NAME,
@@ -370,19 +374,20 @@ impl<K: Display + Eq + Hash> AbstractBackend<K> {
     }
 
     fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()> {
-        Self::process_prev_value(elem, self.data.number_table.insert(elem, value as isize))
+        Self::process_prev_value(elem, self.data.number_table.insert(elem, value as i64))
     }
 
     fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()> {
-        Self::process_prev_value(elem, self.data.number_table.insert(elem, value as isize))
-    }
+        match i64::try_from(value) {
+            Ok(signed_value) => {
+                Self::process_prev_value(
+                    elem,
+                    self.data.number_table.insert(elem, signed_value)
+                )
+            }
 
-    fn add_f64(&mut self, _elem: ElemId, _value: f64) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
-    }
-
-    fn add_bytes(&mut self, _elem: ElemId, _value: &[u8]) -> Result<()> {
-        Result::Err(DatalogExtractionError::UnextractableData)
+            Err(_) => Result::Err(DatalogExtractionError::IntegerCastOverflow(value)),
+        }
     }
 
     fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()> {
@@ -460,12 +465,7 @@ impl DatalogExtractorBackend for Backend {
             fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()>;
             fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()>;
             fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()>;
-            fn add_f64(&mut self, elem: ElemId, value: f64) -> Result<()>;
             fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()>;
-
-            /// This backend does not support extracting byte arrays.
-            fn add_bytes(&mut self, elem: ElemId, value: &[u8]) -> Result<()>;
-
             fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()>;
             fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()>;
             fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
@@ -511,12 +511,7 @@ impl DatalogExtractorBackend for StringKeyBackend {
             fn add_bool(&mut self, elem: ElemId, value: bool) -> Result<()>;
             fn add_i64(&mut self, elem: ElemId, value: i64) -> Result<()>;
             fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()>;
-            fn add_f64(&mut self, elem: ElemId, value: f64) -> Result<()>;
             fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()>;
-
-            /// This backend does not support extracting byte arrays.
-            fn add_bytes(&mut self, elem: ElemId, value: &[u8]) -> Result<()>;
-
             fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()>;
             fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()>;
             fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
@@ -532,7 +527,7 @@ impl DatalogExtractorBackend for StringKeyBackend {
                 self.parent.data.map_table.insert((elem, sym), value),
             )
         } else {
-            Result::Err(DatalogExtractionError::UnextractableData)
+            Result::Err(DatalogExtractionError::UnextractableData("non-string map key".to_string()))
         }
     }
 }

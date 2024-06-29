@@ -128,9 +128,10 @@ mod test {
                 Some(data)
             }
 
-            Err(DatalogExtractionError::UnextractableData)
+            Err(DatalogExtractionError::UnextractableData(_))
             | Err(DatalogExtractionError::NonuniqueRootElement(_))
-            | Err(DatalogExtractionError::NonuniqueIdentifier(_)) => None,
+            | Err(DatalogExtractionError::NonuniqueIdentifier(_))
+            | Err(DatalogExtractionError::IntegerCastOverflow(_)) => None,
 
             Err(DatalogExtractionError::Custom(msg)) => {
                 assert!(false, "{}", msg);
