@@ -355,46 +355,6 @@ pub trait DatalogExtractorBackend {
         Result::Err(DatalogExtractionError::UnextractableData)
     }
 
-    fn begin_tuple(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn end_tuple(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn begin_tuple_entry(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn end_tuple_entry(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn begin_tuple_variant(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn end_tuple_variant(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn begin_tuple_struct(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn end_tuple_struct(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn begin_struct_variant(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
-    fn end_struct_variant(&mut self) -> Result<()> {
-        Result::Ok(())
-    }
-
     /// Materialize fact that element with ID `elem` is a tuple with value
     /// `value` at position `pos`.
     /// The element can have element type [ElemType::NewtypeStruct],
@@ -776,7 +736,6 @@ impl<'a, B: DatalogExtractorBackend> ser::Serializer for &'a mut DatalogExtracto
         value.serialize(&mut *self)?;
         let child_id = self.elem_stack.pop().unwrap();
         let id = self.get_fresh_elem_id(ElemType::NewtypeStruct)?;
-        self.backend.begin_tuple_struct()?;
         self.backend.add_struct_type(id, name)?;
         self.backend.add_tuple_entry(id, 0, child_id)
     }
@@ -802,7 +761,6 @@ impl<'a, B: DatalogExtractorBackend> ser::Serializer for &'a mut DatalogExtracto
         let child_id = self.elem_stack.pop().unwrap();
 
         let id = self.get_fresh_elem_id(ElemType::NewtypeVariant)?;
-        self.backend.begin_tuple_variant()?;
         self.backend.add_variant_type(id, name, variant)?;
         self.backend.add_tuple_entry(id, 0, child_id)
     }
@@ -851,7 +809,6 @@ impl<'a, B: DatalogExtractorBackend> ser::Serializer for &'a mut DatalogExtracto
     ) -> Result<Self::SerializeTupleStruct> {
         let id = self.get_fresh_elem_id(ElemType::TupleStruct)?;
         self.parent_stack.push((id, 0));
-        self.backend.begin_tuple_struct()?;
         self.backend.add_struct_type(id, name)?;
         Result::Ok(self)
     }
@@ -874,7 +831,6 @@ impl<'a, B: DatalogExtractorBackend> ser::Serializer for &'a mut DatalogExtracto
     ) -> Result<Self::SerializeTupleVariant> {
         let id = self.get_fresh_elem_id(ElemType::TupleVariant)?;
         self.parent_stack.push((id, 0));
-        self.backend.begin_tuple_variant()?;
         self.backend.add_variant_type(id, name, variant)?;
         Result::Ok(self)
     }
@@ -976,7 +932,7 @@ impl<'a, B: DatalogExtractorBackend> ser::SerializeTuple for &'a mut DatalogExtr
 
     fn end(self) -> Result<()> {
         self.end_parent()?;
-        self.backend.end_tuple()
+        Result::Ok(())
     }
 }
 
@@ -1000,7 +956,7 @@ impl<'a, B: DatalogExtractorBackend> ser::SerializeTupleVariant for &'a mut Data
 
     fn end(self) -> Result<Self::Ok> {
         self.end_parent()?;
-        self.backend.end_tuple_variant()
+        Result::Ok(())
     }
 }
 
@@ -1024,7 +980,7 @@ impl<'a, B: DatalogExtractorBackend> ser::SerializeTupleStruct for &'a mut Datal
 
     fn end(self) -> Result<Self::Ok> {
         self.end_parent()?;
-        self.backend.end_tuple_struct()
+        Result::Ok(())
     }
 }
 

@@ -441,7 +441,10 @@ impl DatalogExtractorBackend for Backend {
             fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()>;
             fn add_f64(&mut self, elem: ElemId, value: f64) -> Result<()>;
             fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()>;
+
+            /// This backend does not support extracting byte arrays.
             fn add_bytes(&mut self, elem: ElemId, value: &[u8]) -> Result<()>;
+
             fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()>;
             fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()>;
             fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
@@ -482,7 +485,10 @@ impl DatalogExtractorBackend for StringKeyBackend {
             fn add_u64(&mut self, elem: ElemId, value: u64) -> Result<()>;
             fn add_f64(&mut self, elem: ElemId, value: f64) -> Result<()>;
             fn add_str(&mut self, elem: ElemId, value: &str) -> Result<()>;
+
+            /// This backend does not support extracting byte arrays.
             fn add_bytes(&mut self, elem: ElemId, value: &[u8]) -> Result<()>;
+
             fn add_struct_type(&mut self, elem: ElemId, struct_name: &str) -> Result<()>;
             fn add_struct_entry(&mut self, elem: ElemId, key: &str, value: ElemId) -> Result<()>;
             fn add_seq_entry(&mut self, elem: ElemId, pos: usize, value: ElemId) -> Result<()>;
