@@ -54,21 +54,22 @@
 //!
 //! ```ignore
 //! let input = Foo::A(Box::new(Foo::B(10)));
-//! let mut backend = backend::vector::Backend::default();
-//! let mut extractor = DatalogExtractor::new(&mut backend);
+//! let mut extractor = DatalogExtractor::new(backend::vector::Backend::default());
 //! input.serialize(&mut extractor);
 //!
 //! // Now we can inspect the tables in the backend to see what facts got
 //! // extracted from the input.
 //!
+//! let data: backend::vector::BackendData<ElemId> = extractor.get_backend().get_data();
+//!
 //! // there are 3 total elements
-//! assert!(backend.type_table.len() == 3);
+//! assert!(data.type_table.len() == 3);
 //!
 //! // there are 2 enum variant elements
-//! assert!(backend.variant_type_table.len() == 2);
+//! assert!(data.variant_type_table.len() == 2);
 //!
 //! // there is 1 number element
-//! assert!(backend.number_table.len() == 1);
+//! assert!(data.number_table.len() == 1);
 //! ```
 //!
 //! Alternatively, you can store the generated facts in a [SQLite](https://sqlite.org)
