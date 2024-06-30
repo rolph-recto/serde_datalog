@@ -15,5 +15,5 @@ depVersion(dep, version) :-
     map(depRecord, "version", versionId),
     string(versionId, version).
 
-.input type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="test1_toml.db")
+.input rootElem, type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="test1_toml.db")
 .output depVersion(IO=stdout)

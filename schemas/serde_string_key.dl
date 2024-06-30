@@ -17,13 +17,3 @@
 .decl tuple(id: ElemId, pos: number, value: ElemId)
 .decl structType(id: ElemId, type: TypeName)
 .decl variantType(id: ElemId, type: TypeName, variant: VariantName)
-
-// Property that holds when `id` is the root element of a data structure;
-// that is, the element is not referenced by any other element.
-.decl rootElem(id: ElemId)
-rootElem(id) :-
-    type(id, _),
-    !map(_, _, id),
-    !struct(_, _, id),
-    !seq(_, _, id),
-    !tuple(_, _, id).

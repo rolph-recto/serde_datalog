@@ -25,7 +25,7 @@ use crate::input_format::InputFormat;
 struct Args {
     #[arg(
         index = 1,
-        help = "List of input files; if absent, will read from standard input"
+        help = "List of input files; if absent, will read from standard input.\nFiles must all have the same input format."
     )]
     filenames: Vec<String>,
 

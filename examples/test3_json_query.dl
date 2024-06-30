@@ -1,0 +1,28 @@
+// run:
+// serde_dialog test3.json -o test3_json.db
+// souffle test3_json_query.dl
+
+// returns the transitive dependencies of packages
+
+#include "../schemas/serde_string_key.dl"
+
+.decl dependsOn(package1: symbol, package2: symbol)
+dependsOn(package1, package2) :-
+    rootElem(_, root),
+    map(root, "packages", plist),
+    seq(plist, _, p),
+    map(p, "package", pname),
+    string(pname, package1),
+    map(p, "dependencies", pdeps),
+    seq(pdeps, _, dep),
+    string(dep, package2).
+
+dependsOn(package1, package3) :-
+    dependsOn(package1, package2),
+    dependsOn(package2, package3).
+
+.decl depsA(dep: symbol)
+depsA(dep) :- dependsOn("A", dep).
+
+.input rootElem, type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="test3_json.db")
+.output depsA(IO=stdout)

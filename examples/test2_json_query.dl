@@ -18,5 +18,5 @@ boroPopulation(boro, population) :-
 .decl totalPopulation(total: number)
 totalPopulation(sum pop : { boroPopulation(_, pop) }).
 
-.input type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="test2_json.db")
+.input rootElem, type, bool, number, string, map, struct, seq, tuple, structType, variantType(IO=sqlite, dbname="test2_json.db")
 .output totalPopulation(IO=stdout)
