@@ -102,26 +102,11 @@ population data in New York City from the 2020 census:
 ```json
 {
 	"boroughs": [
-		{
-			"name": "Bronx",
-			"population": 1472654
-		},
-		{
-			"name": "Brooklyn",
-			"population": 2736074
-		},
-		{
-			"name": "Manhattan",
-			"population": 1694251
-		},
-		{
-			"name": "Queens",
-			"population": 2405464
-		},
-		{
-			"name": "Staten Island",
-			"population": 495747
-		}
+		{ "name": "Bronx", "population": 1472654 },
+		{ "name": "Brooklyn", "population": 2736074 },
+		{ "name": "Manhattan", "population": 1694251 },
+		{ "name": "Queens", "population": 2405464 },
+		{ "name": "Staten Island", "population": 495747 }
 	]
 }
 ```
@@ -159,7 +144,7 @@ that maps can only have string keys. This is true for formats like JSON or TOML.
 The file `schemas/serde.dl` defines a more general schema that does not have
 this assumption, and thus can represent any value serializable by Serde.
 The `serde_datalog` tool generates facts in the former schema when applicable
-(i.e. when processing input in JSON or TOML file), but will generate facts that
+(i.e. when processing input in JSON or TOML format), but will generate facts that
 conform to the latter schema otherwise.
 
 ### An Example with Recursion
@@ -170,14 +155,8 @@ JSON file that contains information about package dependencies:
 ```json
 {
     "packages": [
-        {
-            "package": "A",
-            "dependencies": ["B"]
-        },
-        {
-            "package": "B",
-            "dependencies": ["C", "D"]
-        }
+        { "package": "A", "dependencies": ["B"] },
+        { "package": "B", "dependencies": ["C", "D"] }
     ]
 }
 ```
