@@ -32,7 +32,7 @@ struct Args {
     #[arg(
         short = 'f',
         long = "format",
-        help = "Format of input file; if absent, will guess format from file extension"
+        help = "Format of input file; if absent, will guess format from file extensions"
     )]
     format: Option<String>,
 
@@ -97,59 +97,31 @@ fn print_formats(formats: &Vec<Box<dyn InputFormat>>) {
 }
 
 fn process_file<B: DatalogExtractorBackend>(
-    formats: &mut Vec<Box<dyn InputFormat>>,
     extractor: &mut DatalogExtractor<B>,
-    arg_format: &Option<String>,
-    file_opt: Option<String>,
+    format: &Box<dyn InputFormat>,
+    filename_opt: Option<String>,
     input: String,
 ) -> Result<(), String> {
-    let format_auto: Option<String> = file_opt.as_ref().and_then(|file| {
-        Path::new(&file)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .map(|s| s.to_string())
-    });
-
-    let format_opt: Option<&dyn InputFormat> = match (&format_auto, &arg_format) {
-        (None, None) => None,
-
-        // format specified with -f overrides format from file extension
-        (_, Some(name)) => formats
-            .iter()
-            .find(|fmt| fmt.name() == *name)
-            .map(|fmt| fmt.as_ref() as &dyn InputFormat),
-
-        (Some(ext), None) => formats
-            .iter()
-            .find(|fmt| fmt.file_extensions().iter().any(|fmt_ext| fmt_ext == ext))
-            .map(|fmt| fmt.as_ref() as &dyn InputFormat),
+    let mut format_data = format.create(&input);
+    let mut deserializer = format_data.deserializer();
+    let path: String = match &filename_opt {
+        Some(file) => PathBuf::from_str(file)
+            .unwrap()
+            .canonicalize()
+            .unwrap()
+            .display()
+            .to_string(),
+        None => "stdin".to_string(),
     };
-
-    if let Some(format) = format_opt {
-        let mut format_data = format.create(&input);
-        let mut deserializer = format_data.deserializer();
-        let path: String = match &file_opt {
-            Some(file) => PathBuf::from_str(file)
-                .unwrap()
-                .canonicalize()
-                .unwrap()
-                .display()
-                .to_string(),
-            None => "stdin".to_string(),
-        };
-        extractor.set_file(&path).unwrap();
-        serde_transcode::transcode(deserializer.as_mut(), extractor).unwrap();
-        Result::Ok(())
-    } else {
-        Result::Err("Unknown format for input.".to_string())
-    }
+    extractor.set_file(&path).unwrap();
+    serde_transcode::transcode(deserializer.as_mut(), extractor).unwrap();
+    Result::Ok(())
 }
 
 fn process_files<B: backend::souffle_sqlite::AbstractBackend>(
-    mut formats: Vec<Box<dyn InputFormat>>,
     backend: B,
+    format: &Box<dyn InputFormat>,
     filenames: &Vec<String>,
-    format: &Option<String>,
     output: &Option<String>,
 ) {
     let mut extractor: DatalogExtractor<B> = DatalogExtractor::new(backend);
@@ -157,20 +129,13 @@ fn process_files<B: backend::souffle_sqlite::AbstractBackend>(
         for filename in filenames.iter() {
             let path = Path::new(filename);
             let buf = fs::read_to_string(path).unwrap();
-            process_file(
-                &mut formats,
-                &mut extractor,
-                format,
-                Some(filename.to_string()),
-                buf,
-            )
-            .unwrap();
+            process_file(&mut extractor, format, Some(filename.to_string()), buf).unwrap();
         }
     } else {
         let mut buf = String::new();
         io::stdin().read_to_string(&mut buf).unwrap();
 
-        process_file(&mut formats, &mut extractor, format, None, buf).unwrap();
+        process_file(&mut extractor, format, None, buf).unwrap();
     };
 
     if let Some(output_file) = output {
@@ -199,23 +164,88 @@ fn main() {
         return;
     }
 
-    let all_string_keys = formats.iter().all(|format| format.has_string_keys());
+    // assume that all input files are the same format
+    let format_res: Result<&Box<dyn InputFormat>, String> = match args.format {
+        Some(name) => formats.iter().find(|fmt| fmt.name() == &name).map_or(
+            Result::Err(format!("Unknown input format {}", &name)),
+            |fmt| Result::Ok(fmt),
+        ),
 
-    if all_string_keys {
-        process_files(
-            formats,
-            backend::souffle_sqlite::StringKeyBackend::default(),
-            &args.filenames,
-            &args.format,
-            &args.output,
-        );
-    } else {
-        process_files(
-            formats,
-            backend::souffle_sqlite::Backend::default(),
-            &args.filenames,
-            &args.format,
-            &args.output,
-        );
+        None => {
+            let exts: Vec<Option<String>> = args
+                .filenames
+                .iter()
+                .map(|filename| {
+                    Path::new(filename)
+                        .extension()
+                        .and_then(|ext| ext.to_str())
+                        .map(|s| s.to_string())
+                })
+                .collect();
+
+            let mut ext_opt: Result<String, String> =
+                Result::Err("Unknown or missing file extension".to_string());
+
+            for file_ext_opt in exts {
+                match file_ext_opt {
+                    Some(file_ext) => {
+                        if let Result::Ok(ext) = &ext_opt {
+                            if ext != &file_ext {
+                                let err: String =
+                                    format!("Input format must be unique; found extensions {} and {} for different formats",
+                                        ext, &file_ext);
+
+                                ext_opt = Result::Err(err);
+                                break;
+                            }
+                        } else {
+                            ext_opt = Result::Ok(file_ext);
+                        }
+                    }
+
+                    None => {
+                        ext_opt = Result::Err("Missing file extension".to_string());
+                        break;
+                    }
+                }
+            }
+
+            ext_opt.map_or_else(
+                |err| Result::Err(err),
+                |ext| {
+                    formats
+                        .iter()
+                        .find(|fmt| fmt.file_extensions().contains(&ext.as_str()))
+                        .map_or(
+                            Result::Err(format!("Unknown file extension {}", &ext)),
+                            |fmt| Result::Ok(fmt),
+                        )
+                },
+            )
+        }
+    };
+
+    match format_res {
+        Err(err) => {
+            println!("{}", err);
+        }
+
+        Ok(format) => {
+            if format.has_string_keys() {
+                process_files(
+                    backend::souffle_sqlite::StringKeyBackend::default(),
+                    format,
+                    &args.filenames,
+                    &args.output,
+                );
+            } else {
+                process_files(
+                    backend::souffle_sqlite::Backend::default(),
+                    format,
+                    &args.filenames,
+                    &args.output,
+                );
+            }
+        }
     }
 }
